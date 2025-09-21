@@ -1,0 +1,32 @@
+// server.js
+const express = require("express");
+const cors = require("cors");
+const verifyToken = require("./middleware/authMiddleware");
+const dotenv = require("dotenv");
+
+dotenv.config();
+
+const app = express();
+
+// Middlewares
+app.use(cors());
+app.use(express.json()); // Para recibir JSON en requests
+
+// Rutas
+const authRoutes = require("./routes/auth");
+app.use("/api/auth", authRoutes);
+
+
+app.get("/api/perfil", verifyToken, (req, res) => {
+  res.json({
+    mensaje: "Accediste a un endpoint protegido",
+    usuario: req.user,
+  });
+});
+
+// Puerto
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+});
