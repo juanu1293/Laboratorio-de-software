@@ -72,8 +72,6 @@ const Register = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    emergencyContactName: "",
-    emergencyContactPhone: "",
     acceptTerms: false,
   });
   const [error, setError] = useState("");
@@ -134,9 +132,7 @@ const Register = () => {
       !formData.phone ||
       !formData.email ||
       !formData.password ||
-      !formData.confirmPassword ||
-      !formData.emergencyContactName ||
-      !formData.emergencyContactPhone
+      !formData.confirmPassword
     ) {
       setError("Por favor completa todos los campos obligatorios");
       return false;
@@ -163,12 +159,6 @@ const Register = () => {
     // Validar formato de teléfono (solo números)
     if (!/^\d+$/.test(formData.phone)) {
       setError("El teléfono debe contener solo números");
-      return false;
-    }
-
-    // Validar formato de teléfono de emergencia (solo números)
-    if (!/^\d+$/.test(formData.emergencyContactPhone)) {
-      setError("El teléfono de emergencia debe contener solo números");
       return false;
     }
 
@@ -206,14 +196,14 @@ const Register = () => {
         nombre: formData.firstName,
         apellido: formData.lastName,
         fecha_nacimiento: formData.birthDate,
-         genero:
-        formData.gender === "male"
-          ? "M"
-          : formData.gender === "female"
-          ? "F"
-          : formData.gender === "other"
-          ? "M"
-          : "M", // N = Prefiero no decir
+        genero:
+          formData.gender === "male"
+            ? "M"
+            : formData.gender === "female"
+            ? "F"
+            : formData.gender === "other"
+            ? "M"
+            : "M", // N = Prefiero no decir
         direccion_facturacion: formData.department,
         lugar_nacimiento: formData.city,
         phone: formData.phone,
@@ -380,8 +370,8 @@ const Register = () => {
                   </div>
                 </div>
 
-                {/* País, Departamento y Ciudad en la misma fila */}
-                <div className="input-row">
+                {/* País, Departamento y Ciudad en la MISMA línea - MODIFICADO */}
+                <div className="input-row three-columns">
                   <div className="input-group">
                     <label htmlFor="country">País de nacimiento *</label>
                     <select
@@ -425,26 +415,25 @@ const Register = () => {
                       ))}
                     </select>
                   </div>
-                </div>
 
-                {/* Ciudad en su propia fila para mejor visualización */}
-                <div className="input-group">
-                  <label htmlFor="city">Ciudad de nacimiento *</label>
-                  <select
-                    id="city"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleChange}
-                    disabled={isLoading || !formData.department}
-                    className={error && !formData.city ? "input-error" : ""}
-                  >
-                    <option value="">Selecciona una ciudad</option>
-                    {availableCities.map((city) => (
-                      <option key={city} value={city}>
-                        {city}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="input-group">
+                    <label htmlFor="city">Ciudad de nacimiento *</label>
+                    <select
+                      id="city"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleChange}
+                      disabled={isLoading || !formData.department}
+                      className={error && !formData.city ? "input-error" : ""}
+                    >
+                      <option value="">Selecciona una ciudad</option>
+                      {availableCities.map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 {/* Teléfono */}
@@ -513,54 +502,6 @@ const Register = () => {
                       disabled={isLoading}
                       className={
                         error && !formData.confirmPassword ? "input-error" : ""
-                      }
-                    />
-                  </div>
-                </div>
-
-                {/* Información de contacto de emergencia */}
-                <div className="form-section-divider">
-                  <h3>Contacto de emergencia</h3>
-                </div>
-
-                {/* Nombre y Teléfono de contacto en la misma fila */}
-                <div className="input-row">
-                  <div className="input-group">
-                    <label htmlFor="emergencyContactName">
-                      Nombre del contacto *
-                    </label>
-                    <input
-                      id="emergencyContactName"
-                      name="emergencyContactName"
-                      type="text"
-                      value={formData.emergencyContactName}
-                      onChange={handleChange}
-                      placeholder="Nombre completo"
-                      disabled={isLoading}
-                      className={
-                        error && !formData.emergencyContactName
-                          ? "input-error"
-                          : ""
-                      }
-                    />
-                  </div>
-
-                  <div className="input-group">
-                    <label htmlFor="emergencyContactPhone">
-                      Teléfono del contacto *
-                    </label>
-                    <input
-                      id="emergencyContactPhone"
-                      name="emergencyContactPhone"
-                      type="tel"
-                      value={formData.emergencyContactPhone}
-                      onChange={handleChange}
-                      placeholder="Número de teléfono"
-                      disabled={isLoading}
-                      className={
-                        error && !formData.emergencyContactPhone
-                          ? "input-error"
-                          : ""
                       }
                     />
                   </div>
