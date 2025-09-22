@@ -68,12 +68,15 @@ const Register = () => {
     country: "",
     department: "",
     city: "",
+    billingAddress: "",
     phone: "",
     email: "",
     password: "",
     confirmPassword: "",
     acceptTerms: false,
   });
+  const [profilePhoto, setProfilePhoto] = useState(null); // NUEVO ESTADO PARA LA FOTO
+  const [photoPreview, setPhotoPreview] = useState(""); // PREVIEW DE LA FOTO
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [availableDepartments, setAvailableDepartments] = useState([]);
@@ -84,6 +87,40 @@ const Register = () => {
   // Función para redirigir al inicio al hacer clic en el logo
   const handleLogoClick = () => {
     navigate("/");
+  };
+
+  // NUEVA FUNCIÓN: Manejar selección de foto
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validar tipo de archivo
+      if (!file.type.startsWith("image/")) {
+        setError("Por favor selecciona un archivo de imagen válido");
+        return;
+      }
+
+      // Validar tamaño (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError("La imagen no debe superar los 5MB");
+        return;
+      }
+
+      setProfilePhoto(file);
+      setError(""); // Limpiar error si había uno
+
+      // Crear preview de la imagen
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPhotoPreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // NUEVA FUNCIÓN: Eliminar foto seleccionada
+  const handleRemovePhoto = () => {
+    setProfilePhoto(null);
+    setPhotoPreview("");
   };
 
   const handleChange = (e) => {
@@ -119,7 +156,7 @@ const Register = () => {
   };
 
   const validateForm = () => {
-    // Validar campos obligatorios
+    // Validar campos obligatorios (la foto NO es obligatoria)
     if (
       !formData.document ||
       !formData.firstName ||
@@ -129,6 +166,7 @@ const Register = () => {
       !formData.country ||
       !formData.department ||
       !formData.city ||
+      !formData.billingAddress ||
       !formData.phone ||
       !formData.email ||
       !formData.password ||
@@ -203,27 +241,52 @@ const Register = () => {
             ? "F"
             : formData.gender === "other"
             ? "M"
-            : "M", // N = Prefiero no decir
-        direccion_facturacion: formData.department,
+            : "M",
+        direccion_facturacion: formData.billingAddress,
         lugar_nacimiento: formData.city,
         phone: formData.phone,
         correo: formData.email,
         contrasena: formData.password,
       };
 
-      // Llamada real al backend
-      const response = await fetch("http://localhost:5000/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      });
+      // Si hay foto de perfil, agregarla al FormData para enviar multipart
+      if (profilePhoto) {
+        const formDataToSend = new FormData();
+        formDataToSend.append("profilePhoto", profilePhoto);
+        formDataToSend.append("userData", JSON.stringify(userData));
 
-      const data = await response.json();
+        // Llamada al backend con FormData (para archivos)
+        const response = await fetch(
+          "http://localhost:5000/api/auth/register",
+          {
+            method: "POST",
+            body: formDataToSend,
+          }
+        );
 
-      if (!response.ok) {
-        throw new Error(data.message || "Error en el registro");
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Error en el registro");
+        }
+      } else {
+        // Llamada normal sin foto
+        const response = await fetch(
+          "http://localhost:5000/api/auth/register",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(userData),
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Error en el registro");
+        }
       }
 
       // Registro exitoso
@@ -281,6 +344,51 @@ const Register = () => {
             <div className="form-columns">
               {/* Columna izquierda */}
               <div className="form-column">
+                {/* NUEVO: Foto de perfil (opcional) */}
+                <div className="input-group">
+                  <label htmlFor="profilePhoto" className="photo-label">
+                    Foto de perfil (opcional)
+                  </label>
+                  <div className="photo-upload-container">
+                    {photoPreview ? (
+                      <div className="photo-preview">
+                        <img
+                          src={photoPreview}
+                          alt="Vista previa"
+                          className="preview-image"
+                        />
+                        <button
+                          type="button"
+                          className="remove-photo-btn"
+                          onClick={handleRemovePhoto}
+                          disabled={isLoading}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="photo-upload-area">
+                        <label htmlFor="profilePhoto" className="upload-label">
+                          <span className="upload-icon">📷</span>
+                          <span className="upload-text">Seleccionar foto</span>
+                          <input
+                            id="profilePhoto"
+                            name="profilePhoto"
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoChange}
+                            disabled={isLoading}
+                            style={{ display: "none" }}
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                  <small className="photo-hint">
+                    Formatos: JPG, PNG, GIF • Máx. 5MB
+                  </small>
+                </div>
+
                 {/* Documento */}
                 <div className="input-group">
                   <label htmlFor="document">Documento de identidad *</label>
@@ -370,7 +478,7 @@ const Register = () => {
                   </div>
                 </div>
 
-                {/* País, Departamento y Ciudad en la MISMA línea - MODIFICADO */}
+                {/* País, Departamento y Ciudad en la MISMA línea */}
                 <div className="input-row three-columns">
                   <div className="input-group">
                     <label htmlFor="country">País de nacimiento *</label>
@@ -434,6 +542,25 @@ const Register = () => {
                       ))}
                     </select>
                   </div>
+                </div>
+
+                {/* Dirección de facturación */}
+                <div className="input-group">
+                  <label htmlFor="billingAddress">
+                    Dirección de facturación *
+                  </label>
+                  <input
+                    id="billingAddress"
+                    name="billingAddress"
+                    type="text"
+                    value={formData.billingAddress}
+                    onChange={handleChange}
+                    placeholder="Ingresa tu dirección completa para facturación"
+                    disabled={isLoading}
+                    className={
+                      error && !formData.billingAddress ? "input-error" : ""
+                    }
+                  />
                 </div>
 
                 {/* Teléfono */}
