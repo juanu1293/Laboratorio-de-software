@@ -75,8 +75,8 @@ const Register = () => {
     confirmPassword: "",
     acceptTerms: false,
   });
-  const [profilePhoto, setProfilePhoto] = useState(null); // NUEVO ESTADO PARA LA FOTO
-  const [photoPreview, setPhotoPreview] = useState(""); // PREVIEW DE LA FOTO
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [availableDepartments, setAvailableDepartments] = useState([]);
@@ -84,31 +84,26 @@ const Register = () => {
 
   const navigate = useNavigate();
 
-  // Función para redirigir al inicio al hacer clic en el logo
   const handleLogoClick = () => {
     navigate("/");
   };
 
-  // NUEVA FUNCIÓN: Manejar selección de foto
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Validar tipo de archivo
       if (!file.type.startsWith("image/")) {
         setError("Por favor selecciona un archivo de imagen válido");
         return;
       }
 
-      // Validar tamaño (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         setError("La imagen no debe superar los 5MB");
         return;
       }
 
       setProfilePhoto(file);
-      setError(""); // Limpiar error si había uno
+      setError("");
 
-      // Crear preview de la imagen
       const reader = new FileReader();
       reader.onload = (e) => {
         setPhotoPreview(e.target.result);
@@ -117,7 +112,6 @@ const Register = () => {
     }
   };
 
-  // NUEVA FUNCIÓN: Eliminar foto seleccionada
   const handleRemovePhoto = () => {
     setProfilePhoto(null);
     setPhotoPreview("");
@@ -126,7 +120,6 @@ const Register = () => {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
 
-    // Si cambia el país, actualizar los departamentos disponibles
     if (name === "country") {
       setFormData((prev) => ({
         ...prev,
@@ -136,18 +129,14 @@ const Register = () => {
       }));
       setAvailableDepartments(departments[value] || []);
       setAvailableCities([]);
-    }
-    // Si cambia el departamento, actualizar las ciudades disponibles
-    else if (name === "department") {
+    } else if (name === "department") {
       setFormData((prev) => ({
         ...prev,
         [name]: value,
         city: "",
       }));
       setAvailableCities(cities[value] || []);
-    }
-    // Para otros campos
-    else {
+    } else {
       setFormData((prev) => ({
         ...prev,
         [name]: type === "checkbox" ? checked : value,
@@ -156,7 +145,6 @@ const Register = () => {
   };
 
   const validateForm = () => {
-    // Validar campos obligatorios (la foto NO es obligatoria)
     if (
       !formData.document ||
       !formData.firstName ||
@@ -176,37 +164,31 @@ const Register = () => {
       return false;
     }
 
-    // Validar formato de email
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
       setError("Por favor ingresa un email válido");
       return false;
     }
 
-    // Validar longitud de contraseña
     if (formData.password.length < 6) {
       setError("La contraseña debe tener al menos 6 caracteres");
       return false;
     }
 
-    // Validar que las contraseñas coincidan
     if (formData.password !== formData.confirmPassword) {
       setError("Las contraseñas no coinciden");
       return false;
     }
 
-    // Validar formato de teléfono (solo números)
     if (!/^\d+$/.test(formData.phone)) {
       setError("El teléfono debe contener solo números");
       return false;
     }
 
-    // Validar que se acepten los términos
     if (!formData.acceptTerms) {
       setError("Debes aceptar los términos y condiciones");
       return false;
     }
 
-    // Validar fecha de nacimiento (debe ser en el pasado)
     const birthDate = new Date(formData.birthDate);
     const today = new Date();
     if (birthDate >= today) {
@@ -228,7 +210,6 @@ const Register = () => {
     }
 
     try {
-      // Preparar datos para enviar al backend
       const userData = {
         cedula: formData.document,
         nombre: formData.firstName,
@@ -249,13 +230,11 @@ const Register = () => {
         contrasena: formData.password,
       };
 
-      // Si hay foto de perfil, agregarla al FormData para enviar multipart
       if (profilePhoto) {
         const formDataToSend = new FormData();
         formDataToSend.append("profilePhoto", profilePhoto);
         formDataToSend.append("userData", JSON.stringify(userData));
 
-        // Llamada al backend con FormData (para archivos)
         const response = await fetch(
           "http://localhost:5000/api/auth/register",
           {
@@ -270,7 +249,6 @@ const Register = () => {
           throw new Error(data.message || "Error en el registro");
         }
       } else {
-        // Llamada normal sin foto
         const response = await fetch(
           "http://localhost:5000/api/auth/register",
           {
@@ -289,10 +267,8 @@ const Register = () => {
         }
       }
 
-      // Registro exitoso
       localStorage.setItem("userEmail", formData.email);
 
-      // Redirigir al login después de registro exitoso
       navigate("/login", {
         state: { message: "Registro exitoso. Ahora puedes iniciar sesión." },
       });
@@ -307,7 +283,6 @@ const Register = () => {
     navigate("/");
   };
 
-  // Obtener la fecha máxima para la fecha de nacimiento (hoy)
   const today = new Date().toISOString().split("T")[0];
 
   return (
@@ -344,51 +319,6 @@ const Register = () => {
             <div className="form-columns">
               {/* Columna izquierda */}
               <div className="form-column">
-                {/* NUEVO: Foto de perfil (opcional) */}
-                <div className="input-group">
-                  <label htmlFor="profilePhoto" className="photo-label">
-                    Foto de perfil (opcional)
-                  </label>
-                  <div className="photo-upload-container">
-                    {photoPreview ? (
-                      <div className="photo-preview">
-                        <img
-                          src={photoPreview}
-                          alt="Vista previa"
-                          className="preview-image"
-                        />
-                        <button
-                          type="button"
-                          className="remove-photo-btn"
-                          onClick={handleRemovePhoto}
-                          disabled={isLoading}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="photo-upload-area">
-                        <label htmlFor="profilePhoto" className="upload-label">
-                          <span className="upload-icon">📷</span>
-                          <span className="upload-text">Seleccionar foto</span>
-                          <input
-                            id="profilePhoto"
-                            name="profilePhoto"
-                            type="file"
-                            accept="image/*"
-                            onChange={handlePhotoChange}
-                            disabled={isLoading}
-                            style={{ display: "none" }}
-                          />
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                  <small className="photo-hint">
-                    Formatos: JPG, PNG, GIF • Máx. 5MB
-                  </small>
-                </div>
-
                 {/* Documento */}
                 <div className="input-group">
                   <label htmlFor="document">Documento de identidad *</label>
@@ -633,6 +563,51 @@ const Register = () => {
                     />
                   </div>
                 </div>
+
+                {/* NUEVA POSICIÓN: Foto de perfil (opcional) - AHORA EN LA COLUMNA DERECHA */}
+                <div className="input-group">
+                  <label htmlFor="profilePhoto" className="photo-label">
+                    Foto de perfil (opcional)
+                  </label>
+                  <div className="photo-upload-container">
+                    {photoPreview ? (
+                      <div className="photo-preview">
+                        <img
+                          src={photoPreview}
+                          alt="Vista previa"
+                          className="preview-image"
+                        />
+                        <button
+                          type="button"
+                          className="remove-photo-btn"
+                          onClick={handleRemovePhoto}
+                          disabled={isLoading}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="photo-upload-area">
+                        <label htmlFor="profilePhoto" className="upload-label">
+                          <span className="upload-icon">📷</span>
+                          <span className="upload-text">Seleccionar foto</span>
+                          <input
+                            id="profilePhoto"
+                            name="profilePhoto"
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoChange}
+                            disabled={isLoading}
+                            style={{ display: "none" }}
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                  <small className="photo-hint">
+                    Formatos: JPG, PNG, GIF • Máx. 5MB
+                  </small>
+                </div>
               </div>
             </div>
 
@@ -680,3 +655,4 @@ const Register = () => {
 };
 
 export default Register;
+
