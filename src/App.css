@@ -799,3 +799,24 @@ select:disabled {
     text-align: center;
   }
 }
+/* Estilo fila de tres columnas */
+.input-row.three-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+/* Asegurar que los selects se adapten al contenedor */
+.input-row.three-columns .input-group select {
+  width: 100%;
+}
+
+/* Responsive para tres columnas */
+@media (max-width: 768px) {
+  .input-row.three-columns {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+}
+
