@@ -35,13 +35,13 @@ const ForgotPassword = () => {
     try {
       // Llamada real al backend para solicitar restablecimiento
       const response = await fetch(
-        "http://tu-backend.com/api/forgot-password",
+        "http://localhost:5000/api/auth/forgot-password",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ email }),
+          body: JSON.stringify({ correo: email }),
         }
       );
 
