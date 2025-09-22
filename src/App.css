@@ -820,3 +820,104 @@ select:disabled {
   }
 }
 
+/* Estilos para la  foto de perfil */
+.photo-label {
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-align: left;
+  color: #444;
+  display: block;
+}
+
+.photo-upload-container {
+  margin-bottom: 5px;
+}
+
+.photo-upload-area {
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.photo-upload-area:hover {
+  border-color: #023e8a;
+}
+
+.upload-label {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-icon {
+  font-size: 24px;
+}
+
+.upload-text {
+  color: #666;
+  font-size: 14px;
+}
+
+.photo-preview {
+  position: relative;
+  display: inline-block;
+}
+
+.preview-image {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #023e8a;
+}
+
+.remove-photo-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s;
+}
+
+.remove-photo-btn:hover:not(:disabled) {
+  background: #c82333;
+}
+
+.remove-photo-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.photo-hint {
+  color: #666;
+  font-size: 0.8rem;
+  margin-top: 5px;
+  display: block;
+}
+
+/* Responsive para la foto de perfil */
+@media (max-width: 768px) {
+  .preview-image {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .photo-upload-area {
+    padding: 15px;
+  }
+}
