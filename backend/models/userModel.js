@@ -14,13 +14,14 @@ const createUser = async (userData) => {
     contrasena,
     foto,
     cedula,
+    telefono
   } = userData;
 
   const query = `
     INSERT INTO usuario.usuario
-      (nombre, apellido, fecha_nacimiento, lugar_nacimiento, direccion_facturacion, genero, correo, contrasena, foto, tipo_usuario, cedula)
+      (nombre, apellido, fecha_nacimiento, lugar_nacimiento, direccion_facturacion, genero, correo, contrasena, foto, tipo_usuario, cedula, telefono)
     VALUES
-      ($1,$2,$3,$4,$5,$6,$7,$8,$9,'cliente',$10)
+      ($1,$2,$3,$4,$5,$6,$7,$8,$9,'cliente',$10,$11)
     RETURNING id_usuario, nombre, apellido, correo, tipo_usuario
   `;
 
@@ -35,6 +36,7 @@ const createUser = async (userData) => {
     contrasena,
     foto || null,
     cedula,
+    telefono
   ];
 
   const result = await pool.query(query, values);
@@ -59,8 +61,9 @@ const updateUser = async (id, data) => {
         fecha_nacimiento = $4,
         telefono = $5,
         correo = $6
-    WHERE id_usuario = $7
-    RETURNING id_usuario, nombre, apellido, correo, cedula, telefono, fecha_nacimiento;
+        direccion_facturacion = $7
+    WHERE id_usuario = $8
+    RETURNING id_usuario, nombre, apellido, correo, cedula, telefono, fecha_nacimiento, direccion_facturacion;
   `;
 
   const values = [
@@ -70,6 +73,7 @@ const updateUser = async (id, data) => {
     data.fecha_nacimiento,
     data.telefono,
     data.correo,
+    data.direccion_facturacion,
     id
   ];
 

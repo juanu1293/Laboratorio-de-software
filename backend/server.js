@@ -24,6 +24,9 @@ app.get("/api/perfil", verifyToken, (req, res) => {
   });
 });
 
+const locationRoutes = require("./routes/locationRoutes");
+app.use("/api/location", locationRoutes);
+
 // Puerto
 const PORT = process.env.PORT || 5000;
 

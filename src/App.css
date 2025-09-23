@@ -921,3 +921,18 @@ select:disabled {
     padding: 15px;
   }
 }
+
+.terms-text-blue {
+  color: #023e8a;
+  font-weight: 500;
+  cursor: default;
+}
+
+.terms-link {
+  color: #0066cc;
+  text-decoration: none;
+}
+
+.terms-link:hover {
+  text-decoration: underline;
+}
