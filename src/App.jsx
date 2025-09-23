@@ -13,6 +13,7 @@ import Login from "./Login";
 import Register from "./Register";
 import ForgotPassword from "./ForgotPassword";
 import ChangePassword from "./ChangePassword";
+import UserMenu from "./UserMenu";
 
 const App = () => {
   return (
@@ -92,7 +93,7 @@ const HomePage = () => {
         setUserInfo({
           nombre: user.nombre,
           correo: user.correo,
-          role: user.tipo_usuario,
+          role: user.tipo_usuario || user.role || "Usuario", // Asegurar que tenga un valor por defecto
         });
         setIsAuthenticated(true);
         return true;
@@ -251,15 +252,9 @@ const HomePage = () => {
           <span className="logo-text">VivaSky</span>
         </div>
 
-        {/* Mostrar información del usuario si está logeado */}
+        {/* Mostrar información del usuario si está logeado - CON MENÚ DESPLEGABLE */}
         {isAuthenticated && userInfo ? (
-          <div className="user-info">
-            <span className="user-welcome">Bienvenido, {userInfo.nombre}</span>
-            <span className="user-role">({userInfo.role})</span>
-            <button className="logout-btn" onClick={handleLogout}>
-              Cerrar sesión
-            </button>
-          </div>
+          <UserMenu userInfo={userInfo} onLogout={handleLogout} />
         ) : (
           <nav className="navigation">
             <a href="#" onClick={handleComingSoon}>
