@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./App.css";
 
@@ -382,10 +383,6 @@ const Register = () => {
                       <option value="">Selecciona tu género</option>
                       <option value="male">Masculino</option>
                       <option value="female">Femenino</option>
-                      <option value="other">Otro</option>
-                      <option value="prefer_not_to_say">
-                        Prefiero no decir
-                      </option>
                     </select>
                   </div>
                 </div>
@@ -635,4 +632,3 @@ const Register = () => {
 };
 
 export default Register;
-
