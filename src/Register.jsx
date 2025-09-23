@@ -564,7 +564,7 @@ const Register = () => {
                   </div>
                 </div>
 
-                {/* NUEVA POSICIÓN: Foto de perfil (opcional) - AHORA EN LA COLUMNA DERECHA */}
+                {/* Foto de perfil (opcional) */}
                 <div className="input-group">
                   <label htmlFor="profilePhoto" className="photo-label">
                     Foto de perfil (opcional)
@@ -611,7 +611,7 @@ const Register = () => {
               </div>
             </div>
 
-            {/* Términos y condiciones */}
+            {/* Términos y condiciones - MODIFICADO: sin enlaces, solo texto azul */}
             <div className="input-group checkbox-group">
               <label className="checkbox-container">
                 <input
@@ -623,13 +623,11 @@ const Register = () => {
                 />
                 <span className="checkmark"></span>
                 Acepto los{" "}
-                <a href="#terms" className="terms-link">
+                <span className="terms-text-blue">
                   términos y condiciones
-                </a>{" "}
+                </span>{" "}
                 y la{" "}
-                <a href="#privacy" className="terms-link">
-                  política de privacidad
-                </a>
+                <span className="terms-text-blue">política de privacidad</span>
               </label>
             </div>
 
