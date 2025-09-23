@@ -2,61 +2,6 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./App.css";
 
-// Datos de ejemplo para seleccionar
-const countries = [
-  "Colombia",
-  "Perú",
-  "México",
-  "Argentina",
-  "Chile",
-  "España",
-];
-const departments = {
-  Colombia: [
-    "Bogotá D.C.",
-    "Antioquia",
-    "Valle del Cauca",
-    "Cundinamarca",
-    "Atlántico",
-  ],
-  Perú: ["Lima", "Arequipa", "Cuzco", "Piura", "La Libertad"],
-  México: ["Ciudad de México", "Jalisco", "Nuevo León", "Puebla", "Veracruz"],
-  Argentina: ["Buenos Aires", "Córdoba", "Santa Fe", "Mendoza", "Tucumán"],
-  Chile: ["Santiago", "Valparaíso", "Biobío", "La Araucanía", "Los Lagos"],
-  España: ["Madrid", "Barcelona", "Valencia", "Sevilla", "Málaga"],
-};
-const cities = {
-  "Bogotá D.C.": ["Bogotá"],
-  Antioquia: ["Medellín", "Envigado", "Bello", "Itagüí"],
-  "Valle del Cauca": ["Cali", "Palmira", "Buenaventura", "Tuluá"],
-  Cundinamarca: ["Soacha", "Facatativá", "Girardot", "Fusagasugá"],
-  Atlántico: ["Barranquilla", "Soledad", "Malambo", "Sabanalarga"],
-  Lima: ["Lima", "Callao", "Miraflores", "Barranco"],
-  Arequipa: ["Arequipa", "Camaná", "Mollendo", "Chivay"],
-  Cuzco: ["Cuzco", "Machu Picchu", "Ollantaytambo", "Urubamba"],
-  Piura: ["Piura", "Sullana", "Paita", "Catacaos"],
-  "La Libertad": ["Trujillo", "Chepén", "Pacasmayo", "Guadalupe"],
-  "Ciudad de México": ["Ciudad de México", "Coyoacán", "Tlalpan", "Xochimilco"],
-  Jalisco: ["Guadalajara", "Zapopan", "Tlaquepaque", "Tonalá"],
-  "Nuevo León": ["Monterrey", "San Nicolás", "Guadalupe", "Apodaca"],
-  Puebla: ["Puebla", "Tehuacán", "San Martín", "Cholula"],
-  Veracruz: ["Veracruz", "Xalapa", "Coatzacoalcos", "Orizaba"],
-  "Buenos Aires": ["Buenos Aires", "La Plata", "Mar del Plata", "Quilmes"],
-  Córdoba: ["Córdoba", "Villa María", "Río Cuarto", "Alta Gracia"],
-  "Santa Fe": ["Rosario", "Santa Fe", "Rafaela", "Venado Tuerto"],
-  Mendoza: ["Mendoza", "San Rafael", "Godoy Cruz", "Guaymallén"],
-  Tucumán: ["San Miguel de Tucumán", "Yerba Buena", "Tafí Viejo", "Aguilares"],
-  Santiago: ["Santiago", "Puente Alto", "Maipú", "La Florida"],
-  Valparaíso: ["Valparaíso", "Viña del Mar", "Quilpué", "Villa Alemana"],
-  Biobío: ["Concepción", "Talcahuano", "Chillán", "Los Ángeles"],
-  "La Araucanía": ["Temuco", "Padre Las Casas", "Villarrica", "Angol"],
-  "Los Lagos": ["Puerto Montt", "Osorno", "Puerto Varas", "Ancud"],
-  Madrid: ["Madrid", "Alcalá de Henares", "Getafe", "Leganés"],
-  Barcelona: ["Barcelona", "Hospitalet", "Badalona", "Sabadell"],
-  Valencia: ["Valencia", "Torrent", "Gandía", "Paterna"],
-  Sevilla: ["Sevilla", "Dos Hermanas", "Alcalá de Guadaíra", "Utrera"],
-  Málaga: ["Málaga", "Marbella", "Vélez-Málaga", "Estepona"],
-};
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -79,6 +24,7 @@ const Register = () => {
   const [photoPreview, setPhotoPreview] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [countries, setCountries] = useState([]); // 👈 ahora dinámico
   const [availableDepartments, setAvailableDepartments] = useState([]);
   const [availableCities, setAvailableCities] = useState([]);
 
@@ -117,31 +63,67 @@ const Register = () => {
     setPhotoPreview("");
   };
 
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const res = await fetch("http://localhost:3000/paises");
+        const data = await res.json();
+        setCountries(data); // [{id:1, nombre:"Colombia"}, ...]
+      } catch (err) {
+        console.error("Error al cargar países:", err);
+      }
+    };
+    fetchCountries();
+  }, []);
+
+  const handleCountryChange = async (e) => {
+    const value = e.target.value;
+    setFormData((prev) => ({
+      ...prev,
+      country: value,
+      department: "",
+      city: "",
+    }));
+
+    if (value) {
+      try {
+        const res = await fetch(`http://localhost:3000/departamentos/${value}`);
+        const data = await res.json();
+        setAvailableDepartments(data); // [{id:10, nombre:"Antioquia"}, ...]
+        setAvailableCities([]);
+      } catch (err) {
+        console.error("Error al cargar departamentos:", err);
+      }
+    }
+  };
+
+  // 🔹 Cuando cambie el departamento, cargar ciudades
+  const handleDepartmentChange = async (e) => {
+    const value = e.target.value;
+    setFormData((prev) => ({
+      ...prev,
+      department: value,
+      city: "",
+    }));
+
+    if (value) {
+      try {
+        const res = await fetch(`http://localhost:3000/ciudades/${value}`);
+        const data = await res.json();
+        setAvailableCities(data); // [{id:100, nombre:"Medellín"}, ...]
+      } catch (err) {
+        console.error("Error al cargar ciudades:", err);
+      }
+    }
+  };
+
+  // 🔹 Actualizar handleChange normal
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-
-    if (name === "country") {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-        department: "",
-        city: "",
-      }));
-      setAvailableDepartments(departments[value] || []);
-      setAvailableCities([]);
-    } else if (name === "department") {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-        city: "",
-      }));
-      setAvailableCities(cities[value] || []);
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: type === "checkbox" ? checked : value,
-      }));
-    }
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
   const validateForm = () => {
@@ -416,16 +398,16 @@ const Register = () => {
                       id="country"
                       name="country"
                       value={formData.country}
-                      onChange={handleChange}
+                      onChange={handleCountryChange}
                       disabled={isLoading}
                       className={
                         error && !formData.country ? "input-error" : ""
                       }
                     >
                       <option value="">Selecciona un país</option>
-                      {countries.map((country) => (
-                        <option key={country} value={country}>
-                          {country}
+                      {countries.map((pais) => (
+                        <option key={pais.id} value={pais.id}>
+                          {pais.nombre}
                         </option>
                       ))}
                     </select>
@@ -439,7 +421,7 @@ const Register = () => {
                       id="department"
                       name="department"
                       value={formData.department}
-                      onChange={handleChange}
+                      onChange={handleDepartmentChange}
                       disabled={isLoading || !formData.country}
                       className={
                         error && !formData.department ? "input-error" : ""
@@ -447,8 +429,8 @@ const Register = () => {
                     >
                       <option value="">Selecciona un departamento</option>
                       {availableDepartments.map((dept) => (
-                        <option key={dept} value={dept}>
-                          {dept}
+                        <option key={dept.id} value={dept.id}>
+                          {dept.nombre}
                         </option>
                       ))}
                     </select>
@@ -466,8 +448,8 @@ const Register = () => {
                     >
                       <option value="">Selecciona una ciudad</option>
                       {availableCities.map((city) => (
-                        <option key={city} value={city}>
-                          {city}
+                        <option key={city.id} value={city.id}>
+                          {city.nombre}
                         </option>
                       ))}
                     </select>
