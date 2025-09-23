@@ -20,6 +20,7 @@ const registerUser = async (req, res) => {
       contrasena,
       foto,
       cedula,
+      telefono
     } = req.body;
 
     // Encriptar contraseña
@@ -38,6 +39,7 @@ const registerUser = async (req, res) => {
       contrasena: hashedPassword,
       foto,
       cedula,
+      telefono
     });
 
     res.status(201).json({
@@ -94,7 +96,7 @@ const updateUserController = async (req, res) => {
   try {
     // 👇 El id del usuario viene del token, ya que en el login guardamos `id_usuario`
     const userId = req.user.id_usuario;
-    const { nombre, apellido, cedula, fecha_nacimiento, telefono, correo } = req.body;
+    const { nombre, apellido, cedula, fecha_nacimiento, telefono, correo, direccion_facturacion } = req.body;
 
     const updatedUser = await updateUser(userId, {
       nombre,
@@ -102,7 +104,8 @@ const updateUserController = async (req, res) => {
       cedula,
       fecha_nacimiento,
       telefono,
-      correo
+      correo,
+      direccion_facturacion
     });
 
     res.json({
