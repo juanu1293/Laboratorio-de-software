@@ -33,8 +33,8 @@ const UserMenu = ({ userInfo, onLogout }) => {
       "create-admin": () => alert("Funcionalidad: Crear Administrador"),
       "delete-admin": () => alert("Funcionalidad: Eliminar Administrador"),
 
-      // Administrador y Usuario
-      "edit-info": () => alert("Funcionalidad: Editar Información"),
+      // Administrador y Usuario - REDIRIGE A PÁGINA DE EDICIÓN
+      "edit-info": () => navigate("/edit-profile"),
 
       // Administrador
       "manage-flights": () => alert("Funcionalidad: Gestionar Vuelos"),
