@@ -14,6 +14,7 @@ import Register from "./Register";
 import ForgotPassword from "./ForgotPassword";
 import ChangePassword from "./ChangePassword";
 import UserMenu from "./UserMenu";
+import EditProfile from "./EditProfile";
 
 const App = () => {
   return (
@@ -24,6 +25,7 @@ const App = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/change-password" element={<ChangePassword />} />
+        <Route path="/edit-profile" element={<EditProfile />} />
       </Routes>
     </Router>
   );
