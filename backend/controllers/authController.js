@@ -112,6 +112,25 @@ const loginUser = async (req, res) => {
 const updateUserController = async (req, res) => {
   try {
     const id_usuario = req.user.id_usuario; // 👈 del token (authMiddleware)
+    const { fecha_nacimiento } = req.body;
+
+    // 🔹 Validar rango de edad si el usuario manda fecha de nacimiento
+    if (fecha_nacimiento) {
+      const birthDate = new Date(fecha_nacimiento);
+      const today = new Date();
+
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+
+      if (age < 18 || age > 80) {
+        return res.status(400).json({
+          error: "La edad debe estar entre 18 y 80 años",
+        });
+      }
+    }
     console.log(" Datos recibidos en updateUser:", req.body, "para usuario:", id_usuario);
     const updatedUser = await updateUser(id_usuario, req.body);
 
