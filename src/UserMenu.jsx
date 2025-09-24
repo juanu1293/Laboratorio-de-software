@@ -61,10 +61,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
     ];
 
     const roleSpecificItems = {
-      root: [
-        { id: "create-admin", label: "Crear Administrador", icon: "👨‍💼" },
-        { id: "delete-admin", label: "Eliminar Administrador", icon: "❌" },
-      ],
+      root: [{ id: "create-admin", label: "Crear Administrador", icon: "👨‍💼" }],
       admin: [
         { id: "edit-info", label: "Editar Información", icon: "✏️" },
         { id: "manage-flights", label: "Gestionar Vuelos", icon: "✈️" },
