@@ -23,6 +23,23 @@ const registerUser = async (req, res) => {
       telefono
     } = req.body;
 
+    // 🔹 Validar rango de edad
+    const birthDate = new Date(fecha_nacimiento);
+    const today = new Date();
+
+    // Calcular edad
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    if (age < 18 || age > 80) {
+      return res.status(400).json({
+        error: "La edad debe estar entre 18 y 80 años"
+      });
+    }
+
     // Encriptar contraseña
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(contrasena, salt);
