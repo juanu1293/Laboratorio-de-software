@@ -704,6 +704,7 @@ select:disabled {
 .input-row.three-columns .input-group {
   min-width: 0; /* Permitir que se reduzcan */
 }
+}
 
 .input-row.three-columns select {
   width: 100%;
@@ -715,6 +716,7 @@ select:disabled {
     max-width: 95%;
     margin: 20px;
   min-width: 120px; /* Ancho mínimo para los selects */
+}
 }
 
 @media (max-width: 968px) {

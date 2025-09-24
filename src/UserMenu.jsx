@@ -168,5 +168,3 @@ const UserMenu = ({ userInfo, onLogout }) => {
 };
 
 export default UserMenu;
-
-export default UserMenu;

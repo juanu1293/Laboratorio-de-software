@@ -69,6 +69,7 @@ const registerUser = async (req, res) => {
   }
 };
 
+
 const loginUser = async (req, res) => {
   try {
     const { correo, contrasena } = req.body;
@@ -111,8 +112,8 @@ const loginUser = async (req, res) => {
 
 const updateUserController = async (req, res) => {
   try {
-    const id_usuario = req.user.id_usuario; // 👈 del token (authMiddleware)
-    const { fecha_nacimiento } = req.body;
+    const id_usuario = req.user.id_usuario; // Del token (authMiddleware)
+    const { fecha_nacimiento, foto, ...rest } = req.body;
 
     // 🔹 Validar rango de edad si el usuario manda fecha de nacimiento
     if (fecha_nacimiento) {
@@ -131,8 +132,15 @@ const updateUserController = async (req, res) => {
         });
       }
     }
-    console.log(" Datos recibidos en updateUser:", req.body, "para usuario:", id_usuario);
-    const updatedUser = await updateUser(id_usuario, req.body);
+
+    console.log("Datos recibidos en updateUser:", req.body, "para usuario:", id_usuario);
+
+    // Enviar fotoBuffer junto con el resto de datos
+    const updatedUser = await updateUser(id_usuario, {
+      ...rest,
+      fecha_nacimiento,
+      foto // aquí pasa el Base64 tal cual
+    });
 
     if (!updatedUser) {
       return res.status(404).json({ error: "Usuario no encontrado" });

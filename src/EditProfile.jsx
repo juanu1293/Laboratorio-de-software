@@ -37,6 +37,7 @@ const EditProfile = () => {
           nombre: user.nombre || "",
           apellido: user.apellido || "",
           fecha_nacimiento: user.fecha_nacimiento || "",
+          lugar_nacimiento: user.lugar_nacimiento || "",
           genero: user.genero || "",
           telefono: user.phone || "",
           email: user.correo || "",
@@ -132,18 +133,24 @@ const EditProfile = () => {
       return;
     }
 
-     try {
-      // 👉 Obtén el token guardado en localStorage/sessionStorage
+    try {
       const token =
         localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
+
+      // ⚡ Incluir la foto Base64 en updatedData
+      const updatedData = {
+        ...formData,
+        lugar_nacimiento: userInfo.lugar_nacimiento || "",
+        foto: photoPreview || null, // 👈 enviamos Base64 o string vacío
+      };
 
       const response = await fetch("http://localhost:5000/api/auth/update", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // 👈 Token para autenticar
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData), // 👈 Enviar JSON
+        body: JSON.stringify(updatedData),
       });
 
       if (!response.ok) {
@@ -159,7 +166,8 @@ const EditProfile = () => {
       const updatedUser = {
         ...userInfo,
         ...formData,
-        foto_perfil: photoPreview || userInfo.foto_perfil,
+        lugar_nacimiento: userInfo.lugar_nacimiento || "",
+        foto_perfil: photoPreview || userInfo.foto_perfil, // mantener foto previa si no cambió
       };
 
       if (localStorage.getItem("userData")) {
@@ -173,6 +181,7 @@ const EditProfile = () => {
       setIsLoading(false);
     }
   };
+
 
   if (!userInfo) {
     return <div>Cargando...</div>;

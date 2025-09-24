@@ -66,6 +66,33 @@ const updateUser = async (id_usuario, userData) => {
     telefono
   } = userData;
 
+  // 🔹 Obtener los valores actuales del usuario
+  const current = await pool.query(
+    "SELECT * FROM usuario.usuario WHERE id_usuario = $1",
+    [id_usuario]
+  );
+
+  if (current.rows.length === 0) {
+    throw new Error("Usuario no encontrado");
+  }
+
+  const currentData = current.rows[0];
+
+  // 🔹 Usar valor actual si no se envía o está vacío
+  const lugarNacimientoFinal =
+    lugar_nacimiento && lugar_nacimiento.trim() !== ""
+      ? lugar_nacimiento
+      : currentData.lugar_nacimiento;
+
+   // 🔹 Convertir Base64 a Buffer aquí
+  let fotoFinal = currentData.foto;
+  if (foto && typeof foto === "string" && foto.startsWith("data:image")) {
+    const base64Data = foto.replace(/^data:image\/\w+;base64,/, "");
+    fotoFinal = Buffer.from(base64Data, "base64");
+  } else if (foto === null) {
+    fotoFinal = null; // Borrar foto
+  }
+  
   const query = `
     UPDATE usuario.usuario
     SET nombre = $1,
@@ -79,26 +106,27 @@ const updateUser = async (id_usuario, userData) => {
         cedula = $9,
         telefono = $10
     WHERE id_usuario = $11
-    RETURNING id_usuario, nombre, apellido, correo, tipo_usuario, foto, cedula, telefono, fecha_nacimiento, genero, direccion_facturacion;
+    RETURNING id_usuario, nombre, apellido, correo, tipo_usuario, foto, cedula, telefono, fecha_nacimiento, genero, direccion_facturacion, lugar_nacimiento;
   `;
 
   const values = [
-    nombre,
-    apellido,
-    fecha_nacimiento || null,
-    lugar_nacimiento || null,
-    direccion || null,
-    genero || null,
-    email,
-    foto || null,
-    documento,
-    telefono,
+    nombre || currentData.nombre,
+    apellido || currentData.apellido,
+    fecha_nacimiento || currentData.fecha_nacimiento,
+    lugarNacimientoFinal,
+    direccion || currentData.direccion_facturacion,
+    genero || currentData.genero,
+    email || currentData.correo,
+    fotoFinal, // aquí enviamos el buffer
+    documento || currentData.cedula,
+    telefono || currentData.telefono,
     id_usuario
   ];
 
   const result = await pool.query(query, values);
   return result.rows[0];
 };
+
 
 const createAdmin = async ({ correo, contrasena }) => {
    const query = `
