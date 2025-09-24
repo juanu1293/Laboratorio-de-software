@@ -33,7 +33,6 @@ const UserMenu = ({ userInfo, onLogout }) => {
       // Root
       "create-admin": () => navigate("/create-admin"),
       "create-admin": () => navigate("/create-admin"),
-      "delete-admin": () => alert("Funcionalidad: Eliminar Administrador"),
 
       // Administrador y Usuario
       // Administrador y Usuario

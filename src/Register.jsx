@@ -210,7 +210,7 @@ const Register = () => {
             : "M",
         direccion_facturacion: formData.billingAddress,
         lugar_nacimiento: formData.city,
-        phone: formData.phone,
+        telefono: formData.phone,
         correo: formData.email,
         contrasena: formData.password,
       };
