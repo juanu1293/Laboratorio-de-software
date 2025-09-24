@@ -68,24 +68,28 @@ const Login = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Guardar token y datos de usuario
-        if (rememberMe) {
-          localStorage.setItem("authToken", data.token);
-          localStorage.setItem("userData", JSON.stringify(data.usuario));
-          localStorage.setItem("userEmail", data.usuario.correo);
+        // Redirigir a completar información si es admin
+        if (
+          data.usuario.tipo_usuario === "Administrador" &&
+          !data.usuario.info_completada
+        ) {
+          navigate("/complete-admin-info", {
+            state: {
+              message: "Por favor completa tu información para continuar",
+              userName: data.usuario.nombre,
+              userRole: data.usuario.tipo_usuario,
+            },
+          });
         } else {
-          sessionStorage.setItem("authToken", data.token);
-          sessionStorage.setItem("userData", JSON.stringify(data.usuario));
+          // Redirigir al home normal
+          navigate("/", {
+            state: {
+              message: `¡Bienvenido ${data.usuario.nombre}!`,
+              userName: data.usuario.nombre,
+              userRole: data.usuario.tipo_usuario,
+            },
+          });
         }
-
-        // Redirigir al home con mensaje de bienvenida
-        navigate("/", {
-          state: {
-            message: `¡Bienvenido ${data.usuario.nombre}!`,
-            userName: data.usuario.nombre,
-            userRole: data.usuario.tipo_usuario,
-          },
-        });
       } else {
         // Manejar diferentes tipos de errores del backend
         if (response.status === 401) {
@@ -253,5 +257,3 @@ const Login = () => {
     </div>
   );
 };
-
-export default Login;
