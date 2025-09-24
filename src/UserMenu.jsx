@@ -39,15 +39,15 @@ const UserMenu = ({ userInfo, onLogout }) => {
       "edit-info": () => navigate("/edit-profile"),
 
       // Administrador
-      "manage-flights": () => alert("Funcionalidad: Gestionar Vuelos"),
-      "cancel-tickets": () => alert("Funcionalidad: Cancelar Tiquetes"),
-      "manage-news": () => alert("Funcionalidad: Gestionar Noticias"),
-      messaging: () => alert("Funcionalidad: Mensajería"),
-      history: () => alert("Funcionalidad: Historial"),
+      "manage-flights": () => alert("Funcionalidad: Gestionar Vuelos, ¡Proximamente Disponible!"),
+      "cancel-tickets": () => alert("Funcionalidad: Cancelar Tiquetes, ¡Proximamente Disponible!"),
+      "manage-news": () => alert("Funcionalidad: Gestionar Noticias, ¡Proximamente Disponible!"),
+      messaging: () => alert("Funcionalidad: Mensajería, ¡Proximamente Disponible!"),
+      history: () => alert("Funcionalidad: Historial, ¡Proximamente Disponible!"),
 
       // Usuario
-      "check-in": () => alert("Funcionalidad: Check-in"),
-      "balance-payments": () => alert("Funcionalidad: Saldo y Pagos"),
+      "check-in": () => alert("Funcionalidad: Check-in, ¡Proximamente Disponible!"),
+      "balance-payments": () => alert("Funcionalidad: Saldo y Pagos, ¡Proximamente Disponible!"),
     };
 
     if (actions[action]) {
