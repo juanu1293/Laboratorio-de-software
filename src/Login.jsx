@@ -110,12 +110,6 @@ const Login = () => {
   const handleCreateAccount = () => navigate("/register");
   const handleForgotPassword = () => navigate("/forgot-password");
 
-  const fillDemoCredentials = () => {
-    setEmail("demo@vivasky.com");
-    setPassword("demopassword123");
-    setRememberMe(true);
-  };
-
   return (
     <div className="app">
       <header className="header">
@@ -139,14 +133,6 @@ const Login = () => {
 
           {error && <div className="error-message">⚠️ {error}</div>}
           {successMessage && <div className="success-message">✅ {successMessage}</div>}
-
-          {process.env.NODE_ENV === "development" && (
-            <div className="demo-credentials">
-              <button type="button" onClick={fillDemoCredentials} className="demo-btn">
-                Usar credenciales de demo
-              </button>
-            </div>
-          )}
 
           <form className="login-form" onSubmit={handleSubmit}>
             <div className="input-group">
