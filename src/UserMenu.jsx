@@ -53,7 +53,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
     }
   };
 
-  // Definir items del menú según el rol
+  // Definir items del menú según el rol - CORREGIDO
   const getMenuItems = () => {
     const commonItems = [
       { id: "messaging", label: "Mensajería", icon: "💬" },
@@ -64,6 +64,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
       Root: [
         { id: "create-admin", label: "Crear Administrador", icon: "👨‍💼" },
         { id: "delete-admin", label: "Eliminar Administrador", icon: "❌" },
+        { id: "edit-info", label: "Editar Información", icon: "✏️" },
       ],
       Administrador: [
         { id: "edit-info", label: "Editar Información", icon: "✏️" },
@@ -79,11 +80,35 @@ const UserMenu = ({ userInfo, onLogout }) => {
       ],
     };
 
-    return [
-      ...(roleSpecificItems[userInfo.role] || []),
-      { type: "divider" },
-      ...commonItems,
-    ];
+    const specificItems = roleSpecificItems[userInfo.role] || [];
+    
+    // Solo agregar divider si hay items específicos Y comunes
+    if (specificItems.length > 0 && commonItems.length > 0) {
+      return [
+        ...specificItems,
+        { type: "divider" },
+        ...commonItems,
+        { type: "divider" },
+      ];
+    }
+    
+    // Si solo hay items específicos
+    if (specificItems.length > 0) {
+      return [
+        ...specificItems,
+        { type: "divider" },
+      ];
+    }
+    
+    // Si solo hay items comunes
+    if (commonItems.length > 0) {
+      return [
+        ...commonItems,
+        { type: "divider" },
+      ];
+    }
+    
+    return [];
   };
 
   const menuItems = getMenuItems();
@@ -132,7 +157,6 @@ const UserMenu = ({ userInfo, onLogout }) => {
               );
             })}
 
-            <div className="menu-divider" />
             <button className="menu-item logout" onClick={onLogout}>
               <span className="menu-icon">🚪</span>
               <span>Cerrar sesión</span>
