@@ -81,6 +81,14 @@ const Login = () => {
             },
           });
         } else {
+          if (rememberMe) {
+          localStorage.setItem("authToken", data.token);
+          localStorage.setItem("userData", JSON.stringify(data.usuario));
+          localStorage.setItem("userEmail", data.usuario.correo);
+        } else {
+          sessionStorage.setItem("authToken", data.token);
+          sessionStorage.setItem("userData", JSON.stringify(data.usuario));
+        }
           // Redirigir al home normal
           navigate("/", {
             state: {
