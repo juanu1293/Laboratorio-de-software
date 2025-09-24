@@ -1172,3 +1172,81 @@ select:disabled {
   width: 100%;
   box-sizing: border-box; /* Incluir padding en el ancho total */
 }
+
+/* MEJORAS PARA LA ALINEACIÓN DEL FORMULARIO */
+.form-column {
+  display: flex;
+  flex-direction: column;
+  gap: 15px; /* Espacio consistente entre grupos */
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  width: 100%; /* Asegurar que ocupen todo el ancho disponible */
+}
+
+.input-group label {
+  font-weight: 600;
+  margin-bottom: 6px; /* Reducir margen inferior */
+  text-align: left;
+  color: #444;
+  font-size: 14px;
+}
+
+.input-group input,
+.input-group select {
+  width: 100% !important; /* Forzar ancho completo */
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box; /* Incluir padding en el ancho */
+}
+
+.input-row {
+  display: flex;
+  gap: 15px;
+  width: 100%;
+  align-items: flex-start; /* Alinear al inicio */
+}
+
+.input-row .input-group {
+  flex: 1;
+  min-width: 0; /* Permitir que se reduzcan */
+}
+
+/* Específico para la fila de tres columnas */
+.input-row.three-columns {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.input-row.three-columns .input-group {
+  flex: 1;
+  min-width: 120px; /* Ancho mínimo para selects */
+}
+
+/* Asegurar que los inputs y selects tengan la misma altura */
+.input-group input, 
+.input-group select {
+  height: 44px; /* Altura consistente */
+}
+
+/* Para pantallas pequeñas */
+@media (max-width: 768px) {
+  .input-row {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .input-row.three-columns {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .input-row .input-group {
+    width: 100%;
+  }
+}
