@@ -135,7 +135,7 @@ const EditProfile = () => {
      try {
       // 👉 Obtén el token guardado en localStorage/sessionStorage
       const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
+        localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
 
       const response = await fetch("http://localhost:5000/api/auth/update", {
         method: "PUT",
@@ -151,6 +151,7 @@ const EditProfile = () => {
       }
 
       const data = await response.json();
+      console.log("👉 Respuesta del backend:", data);
 
       setSuccessMessage("Información actualizada exitosamente");
 
