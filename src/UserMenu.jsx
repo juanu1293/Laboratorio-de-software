@@ -64,7 +64,6 @@ const UserMenu = ({ userInfo, onLogout }) => {
       root: [
         { id: "create-admin", label: "Crear Administrador", icon: "👨‍💼" },
         { id: "delete-admin", label: "Eliminar Administrador", icon: "❌" },
-        { id: "edit-info", label: "Editar Información", icon: "✏️" },
       ],
       admin: [
         { id: "edit-info", label: "Editar Información", icon: "✏️" },
