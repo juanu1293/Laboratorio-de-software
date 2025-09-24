@@ -5,7 +5,7 @@ const { createUser,findUserByEmail } = require("../models/userModel");
 const nodemailer = require("nodemailer");
 const pool = require("../db");
 
-const SECRET_KEY = process.env.JWT_SECRET || "missecretoseguro";
+const SECRET_KEY = process.env.JWT_SECRET || "un_secreto_seguro";
 
 const registerUser = async (req, res) => {
   try {
@@ -94,27 +94,21 @@ const loginUser = async (req, res) => {
 
 const updateUserController = async (req, res) => {
   try {
-    // 👇 El id del usuario viene del token, ya que en el login guardamos `id_usuario`
-    const userId = req.user.id_usuario;
-    const { nombre, apellido, cedula, fecha_nacimiento, telefono, correo, direccion_facturacion } = req.body;
+    const id_usuario = req.user.id_usuario; // 👈 del token (authMiddleware)
+    console.log(" Datos recibidos en updateUser:", req.body, "para usuario:", id_usuario);
+    const updatedUser = await updateUser(id_usuario, req.body);
 
-    const updatedUser = await updateUser(userId, {
-      nombre,
-      apellido,
-      cedula,
-      fecha_nacimiento,
-      telefono,
-      correo,
-      direccion_facturacion
-    });
+    if (!updatedUser) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
 
-    res.json({
+    res.status(200).json({
       mensaje: "Usuario actualizado con éxito",
-      usuario: updatedUser
+      usuario: updatedUser,
     });
   } catch (error) {
     console.error("Error en updateUserController:", error);
-    res.status(500).json({ error: "Error al actualizar usuario" });
+    res.status(500).json({ error: "Error al actualizar el usuario" });
   }
 };
 
