@@ -15,6 +15,7 @@ import ForgotPassword from "./ForgotPassword";
 import ChangePassword from "./ChangePassword";
 import UserMenu from "./UserMenu";
 import EditProfile from "./EditProfile";
+import CreateAdmin from "./CreateAdmin";
 
 const App = () => {
   return (
@@ -26,6 +27,7 @@ const App = () => {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/edit-profile" element={<EditProfile />} />
+        <Route path="/create-admin" element={<CreateAdmin />} />
       </Routes>
     </Router>
   );
