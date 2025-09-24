@@ -52,29 +52,48 @@ const findUserByEmail = async (correo) => {
   return result.rows[0];
 };
 
-const updateUser = async (id, data) => {
+const updateUser = async (id_usuario, userData) => {
+  const {
+    nombre,
+    apellido,
+    fecha_nacimiento,
+    lugar_nacimiento,
+    direccion,
+    genero,
+    email,
+    foto,
+    documento,
+    telefono
+  } = userData;
+
   const query = `
-    UPDATE usuario
+    UPDATE usuario.usuario
     SET nombre = $1,
         apellido = $2,
-        cedula = $3,
-        fecha_nacimiento = $4,
-        telefono = $5,
-        correo = $6
-        direccion_facturacion = $7
-    WHERE id_usuario = $8
-    RETURNING id_usuario, nombre, apellido, correo, cedula, telefono, fecha_nacimiento, direccion_facturacion;
+        fecha_nacimiento = $3,
+        lugar_nacimiento = $4,
+        direccion_facturacion = $5,
+        genero = $6,
+        correo = $7,
+        foto = $8,
+        cedula = $9,
+        telefono = $10
+    WHERE id_usuario = $11
+    RETURNING id_usuario, nombre, apellido, correo, tipo_usuario, foto, cedula, telefono, fecha_nacimiento, genero, direccion_facturacion;
   `;
 
   const values = [
-    data.nombre,
-    data.apellido,
-    data.cedula,
-    data.fecha_nacimiento,
-    data.telefono,
-    data.correo,
-    data.direccion_facturacion,
-    id
+    nombre,
+    apellido,
+    fecha_nacimiento || null,
+    lugar_nacimiento || null,
+    direccion || null,
+    genero || null,
+    email,
+    foto || null,
+    documento,
+    telefono,
+    id_usuario
   ];
 
   const result = await pool.query(query, values);
