@@ -28,11 +28,14 @@ const UserMenu = ({ userInfo, onLogout }) => {
     setIsOpen(false);
 
     //Acciones para cada item del menú
+    //Acciones para cada item del menú
     const actions = {
       // Root
       "create-admin": () => navigate("/create-admin"),
+      "create-admin": () => navigate("/create-admin"),
       "delete-admin": () => alert("Funcionalidad: Eliminar Administrador"),
 
+      // Administrador y Usuario
       // Administrador y Usuario
       "edit-info": () => navigate("/edit-profile"),
 
@@ -78,6 +81,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
 
     const specificItems = roleSpecificItems[userInfo.role] || [];
 
+
     // Solo agregar divider si hay items específicos Y comunes
     if (specificItems.length > 0 && commonItems.length > 0) {
       return [
@@ -88,15 +92,20 @@ const UserMenu = ({ userInfo, onLogout }) => {
       ];
     }
 
+
     // Si solo hay items específicos
     if (specificItems.length > 0) {
       return [...specificItems, { type: "divider" }];
+      return [...specificItems, { type: "divider" }];
     }
+
 
     // Si solo hay items comunes
     if (commonItems.length > 0) {
       return [...commonItems, { type: "divider" }];
+      return [...commonItems, { type: "divider" }];
     }
+
 
     return [];
   };
@@ -157,5 +166,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
     </div>
   );
 };
+
+export default UserMenu;
 
 export default UserMenu;

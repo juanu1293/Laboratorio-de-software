@@ -167,6 +167,7 @@ body {
 }
 
 .input-group input,
+.input-group input,
 .input-group select {
   padding: 14px;
   border: 1px solid #ddd;
@@ -461,6 +462,10 @@ body {
   text-align: center;
   margin: 0 auto; 
   padding: 0 10px; 
+  max-width: 400px; 
+  text-align: center;
+  margin: 0 auto; 
+  padding: 0 10px; 
 }
 
 .checkbox-container input {
@@ -580,6 +585,8 @@ body {
   margin: 15px 0;
   display: flex;
   justify-content: center;
+  display: flex;
+  justify-content: center;
 }
 
 .terms-link {
@@ -679,10 +686,20 @@ select:disabled {
    display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px; /* Reducimos el gap */
+   display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px; /* Reducimos el gap */
   margin-bottom: 15px;
+  width: 100%;
   width: 100%;
 }
 
+/* Asegurar que los selects en tres columnas se ajusten correctamente */
+.input-row.three-columns .input-group {
+  min-width: 0; /* Permitir que se reduzcan */
+}
+
+.input-row.three-columns select {
 /* Asegurar que los selects en tres columnas se ajusten correctamente */
 .input-row.three-columns .input-group {
   min-width: 0; /* Permitir que se reduzcan */
@@ -697,8 +714,17 @@ select:disabled {
   .login-container.horizontal-form {
     max-width: 95%;
     margin: 20px;
+  min-width: 120px; /* Ancho mínimo para los selects */
+}
+
+@media (max-width: 968px) {
+  .login-container.horizontal-form {
+    max-width: 95%;
+    margin: 20px;
   }
 }
+
+
 
 
 
