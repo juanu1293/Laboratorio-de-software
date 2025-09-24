@@ -27,13 +27,13 @@ const UserMenu = ({ userInfo, onLogout }) => {
   const handleMenuItemClick = (action) => {
     setIsOpen(false);
 
-    // Definir las acciones para cada item del menú
+    //Acciones para cada item del menú
     const actions = {
       // Root
-      "create-admin": () => alert("Funcionalidad: Crear Administrador"),
+      "create-admin": () => navigate("/create-admin"),
       "delete-admin": () => alert("Funcionalidad: Eliminar Administrador"),
 
-      // Administrador y Usuario - REDIRIGE A PÁGINA DE EDICIÓN
+      // Administrador y Usuario
       "edit-info": () => navigate("/edit-profile"),
 
       // Administrador
@@ -61,11 +61,8 @@ const UserMenu = ({ userInfo, onLogout }) => {
     ];
 
     const roleSpecificItems = {
-      root: [
-        { id: "create-admin", label: "Crear Administrador", icon: "👨‍💼" },
-        { id: "delete-admin", label: "Eliminar Administrador", icon: "❌" },
-      ],
-      admin: [
+      root: [{ id: "create-admin", label: "Crear Administrador", icon: "👨‍💼" }],
+      administrador: [
         { id: "edit-info", label: "Editar Información", icon: "✏️" },
         { id: "manage-flights", label: "Gestionar Vuelos", icon: "✈️" },
         { id: "cancel-tickets", label: "Cancelar Tiquetes", icon: "🎫" },
@@ -80,7 +77,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
     };
 
     const specificItems = roleSpecificItems[userInfo.role] || [];
-    
+
     // Solo agregar divider si hay items específicos Y comunes
     if (specificItems.length > 0 && commonItems.length > 0) {
       return [
@@ -90,23 +87,17 @@ const UserMenu = ({ userInfo, onLogout }) => {
         { type: "divider" },
       ];
     }
-    
+
     // Si solo hay items específicos
     if (specificItems.length > 0) {
-      return [
-        ...specificItems,
-        { type: "divider" },
-      ];
+      return [...specificItems, { type: "divider" }];
     }
-    
+
     // Si solo hay items comunes
     if (commonItems.length > 0) {
-      return [
-        ...commonItems,
-        { type: "divider" },
-      ];
+      return [...commonItems, { type: "divider" }];
     }
-    
+
     return [];
   };
 
@@ -167,4 +158,4 @@ const UserMenu = ({ userInfo, onLogout }) => {
   );
 };
 
-export default UserMenu;  
+export default UserMenu;

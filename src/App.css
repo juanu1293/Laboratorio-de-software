@@ -166,11 +166,7 @@ body {
   color: #444;
 }
 
-.input-group input[type="text"],
-.input-group input[type="date"],
-.input-group input[type="email"],
-.input-group input[type="password"],
-.input-group input[type="tel"],
+.input-group input,
 .input-group select {
   padding: 14px;
   border: 1px solid #ddd;
@@ -301,11 +297,6 @@ body {
 
 .modal-close:hover {
   color: #000;
-}
-
-.modal-header {
-  position: relative;
-  padding: 0;
 }
 
 .modal-header h2 {
@@ -466,6 +457,10 @@ body {
   align-items: center;
   cursor: pointer;
   font-size: 14px;
+  max-width: 400px; 
+  text-align: center;
+  margin: 0 auto; 
+  padding: 0 10px; 
 }
 
 .checkbox-container input {
@@ -583,6 +578,8 @@ body {
 
 .checkbox-group {
   margin: 15px 0;
+  display: flex;
+  justify-content: center;
 }
 
 .terms-link {
@@ -592,18 +589,6 @@ body {
 
 .terms-link:hover {
   text-decoration: underline;
-}
-
-.form-section-divider {
-  border-top: 1px solid #eee;
-  margin: 20px 0;
-  padding-top: 15px;
-}
-
-.form-section-divider h3 {
-  margin: 0;
-  color: #333;
-  font-size: 1.1rem;
 }
 
 /* Estilos para la información del usuario */
@@ -689,137 +674,33 @@ select:disabled {
   background-color: #5a6268;
 }
 
-/* Responsive Design */
-@media (max-width: 900px) {
-  .form-fields {
-    grid-template-columns: 1fr;
-  }
-  
-  .destinations-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .header {
-    padding: 15px 20px;
-    flex-direction: column;
-    gap: 15px;
-  }
-  
-  .hero h1 {
-    font-size: 2rem;
-  }
-  
-  .destinations-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .popular-destinations {
-    padding: 40px 20px;
-  }
-  
-  .flight-form {
-    padding: 20px;
-  }
-  
-  .login-container {
-    padding: 30px 20px;
-  }
-  
-  .input-row {
-    flex-direction: column;
-    gap: 15px;
-  }
-  
-  .login-options {
-    flex-direction: column;
-    gap: 10px;
-    align-items: flex-start;
-  }
-  
-  .forgot-password-link {
-    align-self: flex-end;
-  }
-  
-  .navigation {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 15px;
-  }
-  
-  .trip-type {
-    flex-direction: column;
-  }
-  
-  .trip-type label:first-child {
-    border-right: none;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  .modal-overlay {
-    padding: 10px;
-  }
-  
-  .destination-modal {
-    max-width: 100%;
-  }
-  
-  .modal-header h2 {
-    font-size: 24px;
-  }
-  
-  .destination-image-modal {
-    height: 150px;
-  }
-  
-  .logo-image {
-    width: 35px;
-    height: 35px;
-  }
-  
-  .logo-text {
-    font-size: 24px;
-  }
-}
-
-@media (max-width: 480px) {
-  .logo-image {
-    width: 30px;
-    height: 30px;
-  }
-  
-  .logo-text {
-    font-size: 20px;
-  }
-  
-  .user-info {
-    flex-direction: column;
-    gap: 10px;
-    text-align: center;
-  }
-}
-
 /* Estilos para fila de tres columnas */
 .input-row.three-columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 15px;
+   display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px; /* Reducimos el gap */
   margin-bottom: 15px;
-}
-
-/* Asegurar que los selects se adapten al contenedor */
-.input-row.three-columns .input-group select {
   width: 100%;
 }
 
-/* Responsive tres columnas */
-@media (max-width: 768px) {
-  .input-row.three-columns {
-    grid-template-columns: 1fr;
-    gap: 15px;
+/* Asegurar que los selects en tres columnas se ajusten correctamente */
+.input-row.three-columns .input-group {
+  min-width: 0; /* Permitir que se reduzcan */
+}
+
+.input-row.three-columns select {
+  width: 100%;
+  min-width: 120px; /* Ancho mínimo para los selects */
+}
+
+@media (max-width: 968px) {
+  .login-container.horizontal-form {
+    max-width: 95%;
+    margin: 20px;
   }
 }
+
+
 
 /* Estilos para la  foto de perfil */
 .photo-label {
@@ -909,17 +790,6 @@ select:disabled {
   font-size: 0.8rem;
   margin-top: 5px;
   display: block;
-}
-
-@media (max-width: 768px) {
-  .preview-image {
-    width: 80px;
-    height: 80px;
-  }
-  
-  .photo-upload-area {
-    padding: 15px;
-  }
 }
 
 .terms-text-blue {
@@ -1036,4 +906,347 @@ select:disabled {
 .menu-icon {
   width: 16px;
   text-align: center;
+}
+
+/* Estilos para la página de edición de perfil */
+.edit-profile-container {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 900px;
+  margin: 20px auto;
+}
+
+.edit-profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-columns-horizontal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-bottom: 20px;
+}
+
+.form-column-left,
+.form-column-right {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.photo-section {
+  text-align: center;
+  padding: 20px;
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: flex-end;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.cancel-btn {
+  padding: 12px 25px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.save-btn {
+  padding: 12px 25px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.save-btn:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.save-btn.loading {
+  background-color: #28a745;
+}
+
+/* Responsive Design */
+@media (max-width: 900px) {
+  .form-fields {
+    grid-template-columns: 1fr;
+  }
+  
+  .destinations-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .input-row.three-columns {
+    grid-template-columns: 1fr; /* Una columna en tablets */
+    gap: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 15px 20px;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .hero h1 {
+    font-size: 2rem;
+  }
+  
+  .destinations-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .popular-destinations {
+    padding: 40px 20px;
+  }
+  
+  .flight-form {
+    padding: 20px;
+  }
+  
+  .login-container {
+    padding: 30px 20px;
+  }
+  
+  .input-row {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .login-options {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  
+  .forgot-password-link {
+    align-self: flex-end;
+  }
+  
+  .navigation {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+  }
+  
+  .trip-type {
+    flex-direction: column;
+  }
+  
+  .trip-type label:first-child {
+    border-right: none;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .modal-overlay {
+    padding: 10px;
+  }
+  
+  .destination-modal {
+    max-width: 100%;
+  }
+  
+  .modal-header h2 {
+    font-size: 24px;
+  }
+  
+  .destination-image-modal {
+    height: 150px;
+  }
+  
+  .logo-image {
+    width: 35px;
+    height: 35px;
+  }
+  
+  .logo-text {
+    font-size: 24px;
+  }
+  
+  .user-info {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  
+  .form-columns-horizontal {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .edit-profile-container {
+    padding: 20px;
+    margin: 10px;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .preview-image {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .photo-upload-area {
+    padding: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-image {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .logo-text {
+    font-size: 20px;
+  }
+}
+
+.login-container.horizontal-form {
+  max-width: 900px; 
+}
+
+.form-columns {
+  display: flex;
+  gap: 30px;
+  flex-wrap: wrap; 
+}
+
+.form-column {
+  flex: 1;
+  min-width: 300px; 
+}
+
+@media (max-width: 768px) {
+  .form-columns {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .form-column {
+    min-width: 100%;
+  }
+  
+  .input-row {
+    flex-direction: column;
+  }
+  
+  .input-row.three-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Asegurar que los inputs y selects se ajusten correctamente */
+.input-group input,
+.input-group select {
+  width: 100%;
+  box-sizing: border-box; /* Incluir padding en el ancho total */
+}
+
+/* MEJORAS PARA LA ALINEACIÓN DEL FORMULARIO */
+.form-column {
+  display: flex;
+  flex-direction: column;
+  gap: 15px; /* Espacio consistente entre grupos */
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  width: 100%; /* Asegurar que ocupen todo el ancho disponible */
+}
+
+.input-group label {
+  font-weight: 600;
+  margin-bottom: 6px; /* Reducir margen inferior */
+  text-align: left;
+  color: #444;
+  font-size: 14px;
+}
+
+.input-group input,
+.input-group select {
+  width: 100% !important; /* Forzar ancho completo */
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box; /* Incluir padding en el ancho */
+}
+
+.input-row {
+  display: flex;
+  gap: 15px;
+  width: 100%;
+  align-items: flex-start; /* Alinear al inicio */
+}
+
+.input-row .input-group {
+  flex: 1;
+  min-width: 0; /* Permitir que se reduzcan */
+}
+
+/* Específico para la fila de tres columnas */
+.input-row.three-columns {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.input-row.three-columns .input-group {
+  flex: 1;
+  min-width: 120px; /* Ancho mínimo para selects */
+}
+
+/* Asegurar que los inputs y selects tengan la misma altura */
+.input-group input, 
+.input-group select {
+  height: 44px; /* Altura consistente */
+}
+
+/* Para pantallas pequeñas */
+@media (max-width: 768px) {
+  .input-row {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .input-row.three-columns {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .input-row .input-group {
+    width: 100%;
+  }
 }

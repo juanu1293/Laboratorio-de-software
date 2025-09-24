@@ -13,11 +13,8 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleLogoClick = () => {
-    navigate("/");
-  };
+  const handleLogoClick = () => navigate("/");
 
-  // Cargar email guardado y mensajes al iniciar
   useEffect(() => {
     const savedEmail = localStorage.getItem("userEmail");
     if (savedEmail) {
@@ -39,7 +36,6 @@ const Login = () => {
     setError("");
     setSuccessMessage("");
 
-    // Validaciones del frontend
     if (!email || !password) {
       setError("Por favor completa todos los campos");
       setIsLoading(false);
@@ -53,41 +49,46 @@ const Login = () => {
     }
 
     try {
-      // ✅ INTEGRACIÓN CON BACKEND - Login
       const response = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          correo: email,
-          contrasena: password,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ correo: email, contrasena: password }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // Guardar token y datos de usuario
-        if (rememberMe) {
-          localStorage.setItem("authToken", data.token);
-          localStorage.setItem("userData", JSON.stringify(data.usuario));
-          localStorage.setItem("userEmail", data.usuario.correo);
-        } else {
-          sessionStorage.setItem("authToken", data.token);
-          sessionStorage.setItem("userData", JSON.stringify(data.usuario));
-        }
+        const storeData = () => {
+          if (rememberMe) {
+            localStorage.setItem("authToken", data.token);
+            localStorage.setItem("userData", JSON.stringify(data.usuario));
+            localStorage.setItem("userEmail", data.usuario.correo);
+          } else {
+            sessionStorage.setItem("authToken", data.token);
+            sessionStorage.setItem("userData", JSON.stringify(data.usuario));
+          }
+        };
 
-        // Redirigir al home con mensaje de bienvenida
-        navigate("/", {
-          state: {
-            message: `¡Bienvenido ${data.usuario.nombre}!`,
-            userName: data.usuario.nombre,
-            userRole: data.usuario.tipo_usuario,
-          },
-        });
+        storeData();
+
+        if (data.usuario.tipo_usuario === "administrador" && !data.usuario.info_completada) {
+          navigate("/complete-admin-info", {
+            state: {
+              message: "Por favor completa tu información para continuar",
+              userName: data.usuario.nombre,
+              userRole: data.usuario.tipo_usuario,
+            },
+          });
+        } else {
+          navigate("/", {
+            state: {
+              message: `¡Bienvenido ${data.usuario.nombre}!`,
+              userName: data.usuario.nombre,
+              userRole: data.usuario.tipo_usuario,
+            },
+          });
+        }
       } else {
-        // Manejar diferentes tipos de errores del backend
         if (response.status === 401) {
           setError("Credenciales incorrectas. Verifica tu email y contraseña.");
         } else if (response.status === 403) {
@@ -95,33 +96,20 @@ const Login = () => {
         } else if (response.status === 404) {
           setError("No existe una cuenta con este email.");
         } else {
-          setError(
-            data.message || "Error al iniciar sesión. Intenta nuevamente."
-          );
+          setError(data.message || "Error al iniciar sesión. Intenta nuevamente.");
         }
       }
     } catch (err) {
-      setError(
-        "Error de conexión con el servidor. Verifica tu conexión e intenta nuevamente."
-      );
+      setError("Error de conexión con el servidor. Verifica tu conexión e intenta nuevamente.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleBackToHome = () => {
-    navigate("/");
-  };
+  const handleBackToHome = () => navigate("/");
+  const handleCreateAccount = () => navigate("/register");
+  const handleForgotPassword = () => navigate("/forgot-password");
 
-  const handleCreateAccount = () => {
-    navigate("/register");
-  };
-
-  const handleForgotPassword = () => {
-    navigate("/forgot-password");
-  };
-
-  // Función para probar con datos de demo (eliminar en producción)
   const fillDemoCredentials = () => {
     setEmail("demo@vivasky.com");
     setPassword("demopassword123");
@@ -131,11 +119,7 @@ const Login = () => {
   return (
     <div className="app">
       <header className="header">
-        <div
-          className="logo-container"
-          onClick={handleLogoClick}
-          style={{ cursor: "pointer" }}
-        >
+        <div className="logo-container" onClick={handleLogoClick} style={{ cursor: "pointer" }}>
           <img
             src="https://i.pinimg.com/736x/60/48/b4/6048b4ae7f74724389d345767e8061a0.jpg"
             alt="VivaSky Logo"
@@ -151,23 +135,14 @@ const Login = () => {
       <section className="login-section">
         <div className="login-container">
           <h2>Iniciar sesión</h2>
-          <p className="login-subtitle">
-            Accede a tu cuenta para gestionar tus reservas
-          </p>
+          <p className="login-subtitle">Accede a tu cuenta para gestionar tus reservas</p>
 
           {error && <div className="error-message">⚠️ {error}</div>}
-          {successMessage && (
-            <div className="success-message">✅ {successMessage}</div>
-          )}
+          {successMessage && <div className="success-message">✅ {successMessage}</div>}
 
-          {/* Botón de demo (solo para desarrollo) */}
           {process.env.NODE_ENV === "development" && (
             <div className="demo-credentials">
-              <button
-                type="button"
-                onClick={fillDemoCredentials}
-                className="demo-btn"
-              >
+              <button type="button" onClick={fillDemoCredentials} className="demo-btn">
                 Usar credenciales de demo
               </button>
             </div>
@@ -212,20 +187,12 @@ const Login = () => {
                 Recordar mi cuenta
               </label>
 
-              <a
-                href="#forgot-password"
-                onClick={handleForgotPassword}
-                className="forgot-password-link"
-              >
+              <a href="#forgot-password" onClick={handleForgotPassword} className="forgot-password-link">
                 ¿Olvidaste tu contraseña?
               </a>
             </div>
 
-            <button
-              type="submit"
-              className={`login-btn ${isLoading ? "loading" : ""}`}
-              disabled={isLoading}
-            >
+            <button type="submit" className={`login-btn ${isLoading ? "loading" : ""}`} disabled={isLoading}>
               {isLoading ? (
                 <>
                   <span className="spinner"></span>
@@ -241,11 +208,7 @@ const Login = () => {
             <span>¿No tienes cuenta con VivaSky? ¡Regístrate ahora!</span>
           </div>
 
-          <button
-            className="create-account-btn"
-            onClick={handleCreateAccount}
-            disabled={isLoading}
-          >
+          <button className="create-account-btn" onClick={handleCreateAccount} disabled={isLoading}>
             Registrar usuario
           </button>
         </div>

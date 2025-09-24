@@ -1,11 +1,11 @@
 // controllers/userController.js
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { createUser,findUserByEmail } = require("../models/userModel");
+const { createUser,findUserByEmail, updateUser, createAdmin  } = require("../models/userModel");
 const nodemailer = require("nodemailer");
 const pool = require("../db");
 
-const SECRET_KEY = process.env.JWT_SECRET || "missecretoseguro";
+const SECRET_KEY = process.env.JWT_SECRET || "un_secreto_seguro";
 
 const registerUser = async (req, res) => {
   try {
@@ -22,6 +22,23 @@ const registerUser = async (req, res) => {
       cedula,
       telefono
     } = req.body;
+
+    // 🔹 Validar rango de edad
+    const birthDate = new Date(fecha_nacimiento);
+    const today = new Date();
+
+    // Calcular edad
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    if (age < 18 || age > 80) {
+      return res.status(400).json({
+        error: "La edad debe estar entre 18 y 80 años"
+      });
+    }
 
     // Encriptar contraseña
     const salt = await bcrypt.genSalt(10);
@@ -94,27 +111,40 @@ const loginUser = async (req, res) => {
 
 const updateUserController = async (req, res) => {
   try {
-    // 👇 El id del usuario viene del token, ya que en el login guardamos `id_usuario`
-    const userId = req.user.id_usuario;
-    const { nombre, apellido, cedula, fecha_nacimiento, telefono, correo, direccion_facturacion } = req.body;
+    const id_usuario = req.user.id_usuario; // 👈 del token (authMiddleware)
+    const { fecha_nacimiento } = req.body;
 
-    const updatedUser = await updateUser(userId, {
-      nombre,
-      apellido,
-      cedula,
-      fecha_nacimiento,
-      telefono,
-      correo,
-      direccion_facturacion
-    });
+    // 🔹 Validar rango de edad si el usuario manda fecha de nacimiento
+    if (fecha_nacimiento) {
+      const birthDate = new Date(fecha_nacimiento);
+      const today = new Date();
 
-    res.json({
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+
+      if (age < 18 || age > 80) {
+        return res.status(400).json({
+          error: "La edad debe estar entre 18 y 80 años",
+        });
+      }
+    }
+    console.log(" Datos recibidos en updateUser:", req.body, "para usuario:", id_usuario);
+    const updatedUser = await updateUser(id_usuario, req.body);
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    res.status(200).json({
       mensaje: "Usuario actualizado con éxito",
-      usuario: updatedUser
+      usuario: updatedUser,
     });
   } catch (error) {
     console.error("Error en updateUserController:", error);
-    res.status(500).json({ error: "Error al actualizar usuario" });
+    res.status(500).json({ error: "Error al actualizar el usuario" });
   }
 };
 
@@ -170,4 +200,60 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, updateUserController, forgotPassword, resetPassword  };
+// Crear un administrador (solo permitido para Root)
+const createAdminController = async (req, res) => {
+  try {
+    if (req.user.tipo_usuario !== "root") {
+      return res.status(403).json({ message: "No tienes permisos para esta acción" });
+    }
+
+    const { correo, contrasena } = req.body;
+
+    if (!correo || !contrasena) {
+      return res.status(400).json({ message: "Correo y contraseña son obligatorios" });
+    }
+
+    // Verificar si ya existe
+    const existing = await findUserByEmail(correo);
+    if (existing) {
+      return res.status(400).json({ message: "El correo ya está registrado" });
+    }
+
+    // Hashear contraseña
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(contrasena, salt);
+
+    // Crear admin en BD
+    const admin = await createAdmin({ correo, contrasena: hashedPassword });
+
+    res.status(201).json({
+      message: "Administrador creado exitosamente",
+      admin,
+    });
+  } catch (error) {
+    console.error("Error en createAdminController:", error);
+    res.status(500).json({ message: "Error en el servidor" });
+  }
+};
+
+// Obtener info del usuario logueado
+const getCurrentUser = async (req, res) => {
+  try {
+    const id_usuario = req.user.id_usuario; // viene del middleware verifyToken
+    const result = await pool.query(
+      "SELECT id_usuario, nombre, apellido, correo, tipo_usuario, cedula, telefono FROM usuario.usuario WHERE id_usuario = $1",
+      [id_usuario]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error en getCurrentUser:", error);
+    res.status(500).json({ message: "Error en el servidor" });
+  }
+};
+
+module.exports = { registerUser, loginUser, updateUserController, forgotPassword, resetPassword, createAdminController, getCurrentUser };
