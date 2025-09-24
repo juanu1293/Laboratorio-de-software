@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./App.css";
 
-
 const Register = () => {
   const [formData, setFormData] = useState({
     document: "",
@@ -87,7 +86,9 @@ const Register = () => {
 
     if (value) {
       try {
-        const res = await fetch(`http://localhost:5000/api/location/departamentos/${value}`);
+        const res = await fetch(
+          `http://localhost:5000/api/location/departamentos/${value}`
+        );
         const data = await res.json();
         setAvailableDepartments(data); // [{id:10, nombre:"Antioquia"}, ...]
         setAvailableCities([]);
@@ -108,7 +109,9 @@ const Register = () => {
 
     if (value) {
       try {
-        const res = await fetch(`http://localhost:5000/api/location/ciudades/${value}`);
+        const res = await fetch(
+          `http://localhost:5000/api/location/ciudades/${value}`
+        );
         const data = await res.json();
         setAvailableCities(data); // [{id:100, nombre:"Medellín"}, ...]
       } catch (err) {
@@ -425,7 +428,10 @@ const Register = () => {
                     >
                       <option value="">Selecciona un departamento</option>
                       {availableDepartments.map((dept) => (
-                        <option key={dept.iddepartamento} value={dept.iddepartamento}>
+                        <option
+                          key={dept.iddepartamento}
+                          value={dept.iddepartamento}
+                        >
                           {dept.nombre}
                         </option>
                       ))}
@@ -591,7 +597,10 @@ const Register = () => {
 
             {/* Términos y condiciones - MODIFICADO: sin enlaces, solo texto azul */}
             <div className="input-group checkbox-group">
-              <label className="checkbox-container">
+              <label
+                className="checkbox-container"
+                style={{ whiteSpace: "nowrap" }}
+              >
                 <input
                   name="acceptTerms"
                   type="checkbox"
@@ -600,12 +609,16 @@ const Register = () => {
                   disabled={isLoading}
                 />
                 <span className="checkmark"></span>
-                Acepto los{" "}
-                <span className="terms-text-blue">
-                  términos y condiciones
-                </span>{" "}
-                y la{" "}
-                <span className="terms-text-blue">política de privacidad</span>
+                <span style={{ marginLeft: "8px" }}>
+                  Acepto los{" "}
+                  <span style={{ color: "#023e8a", fontWeight: "500" }}>
+                    términos y condiciones
+                  </span>{" "}
+                  y la{" "}
+                  <span style={{ color: "#023e8a", fontWeight: "500" }}>
+                    política de privacidad
+                  </span>
+                </span>
               </label>
             </div>
 
