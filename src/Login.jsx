@@ -71,7 +71,10 @@ const Login = () => {
 
         storeData();
 
-        if (data.usuario.tipo_usuario === "administrador" && !data.usuario.info_completada) {
+        if (
+          data.usuario.tipo_usuario === "administrador" &&
+          (!data.usuario.cedula || data.usuario.cedula === "null" || data.usuario.cedula === "")
+        ) {
           navigate("/complete-admin-info", {
             state: {
               message: "Por favor completa tu información para continuar",
