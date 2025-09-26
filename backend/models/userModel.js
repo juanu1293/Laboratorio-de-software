@@ -101,6 +101,11 @@ const updateUser = async (id_usuario, userData) => {
   } else if (foto === null) {
     fotoFinal = null; // Borrar foto
   }
+
+  if (user.fecha_nacimiento) {
+    const fecha = new Date(user.fecha_nacimiento);
+    user.fecha_nacimiento = fecha.toISOString().split("T")[0];
+  }
   
   const query = `
     UPDATE usuario.usuario
