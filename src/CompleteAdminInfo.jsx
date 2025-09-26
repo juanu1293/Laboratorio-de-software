@@ -132,7 +132,7 @@ const CompleteAdminInfo = () => {
       }
 
       const response = await fetch(
-        "http://localhost:5000/api/auth/complete-admin-info",
+        "http://localhost:5000/api/auth/update",
         {
           method: "PUT",
           headers: {
@@ -140,7 +140,7 @@ const CompleteAdminInfo = () => {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            cedula: formData.documento,
+            documento: formData.documento,
             nombre: formData.nombre,
             apellido: formData.apellido,
             telefono: formData.telefono,
