@@ -1,56 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./App.css";
 
-const EditProfile = () => {
-  const [userInfo, setUserInfo] = useState(null);
-  const [formData, setFormData] = useState({});
-  const [profilePhoto, setProfilePhoto] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState("");
+const CreateAdmin = () => {
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
-
-  // Cargar datos del usuario al iniciar
-  useEffect(() => {
-    const userData =
-      localStorage.getItem("userData") || sessionStorage.getItem("userData");
-    if (userData) {
-      const user = JSON.parse(userData);
-      setUserInfo(user);
-
-      // Inicializar formData según el rol
-      if (user.tipo_usuario === "Administrador") {
-        setFormData({
-          documento: user.cedula || "",
-          nombre: user.nombre || "",
-          apellido: user.apellido || "",
-          telefono: user.phone || "",
-          email: user.correo || "",
-        });
-      } else {
-        // Usuario - más campos
-        setFormData({
-          documento: user.cedula || "",
-          nombre: user.nombre || "",
-          apellido: user.apellido || "",
-          fecha_nacimiento: user.fecha_nacimiento || "",
-          lugar_nacimiento: user.lugar_nacimiento || "",
-          genero: user.genero || "",
-          telefono: user.phone || "",
-          email: user.correo || "",
-          direccion: user.direccion_facturacion || "",
-        });
-      }
-
-      // Cargar foto de perfil si existe
-      if (user.foto_perfil) {
-        setPhotoPreview(user.foto_perfil);
-      }
-    }
-  }, []);
 
   const handleLogoClick = () => {
     navigate("/");
@@ -58,35 +20,6 @@ const EditProfile = () => {
 
   const handleBackToHome = () => {
     navigate("/");
-  };
-
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        setError("Por favor selecciona un archivo de imagen válido");
-        return;
-      }
-
-      if (file.size > 5 * 1024 * 1024) {
-        setError("La imagen no debe superar los 5MB");
-        return;
-      }
-
-      setProfilePhoto(file);
-      setError("");
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPhotoPreview(e.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleRemovePhoto = () => {
-    setProfilePhoto(null);
-    setPhotoPreview("");
   };
 
   const handleChange = (e) => {
@@ -98,14 +31,8 @@ const EditProfile = () => {
   };
 
   const validateForm = () => {
-    if (
-      !formData.documento ||
-      !formData.nombre ||
-      !formData.apellido ||
-      !formData.telefono ||
-      !formData.email
-    ) {
-      setError("Por favor completa todos los campos obligatorios");
+    if (!formData.email || !formData.password || !formData.confirmPassword) {
+      setError("Por favor completa todos los campos");
       return false;
     }
 
@@ -114,8 +41,13 @@ const EditProfile = () => {
       return false;
     }
 
-    if (!/^\d+$/.test(formData.telefono)) {
-      setError("El teléfono debe contener solo números");
+    if (formData.password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres");
+      return false;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Las contraseñas no coinciden");
       return false;
     }
 
@@ -134,60 +66,50 @@ const EditProfile = () => {
     }
 
     try {
+      // Obtener el token de autenticación del usuario root
       const token =
-        localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
+        localStorage.getItem("authToken") ||
+        sessionStorage.getItem("authToken");
 
-      // ⚡ Incluir la foto Base64 en updatedData
-      const updatedData = {
-        ...formData,
-        lugar_nacimiento: userInfo.lugar_nacimiento || "",
-        foto: photoPreview || null, // 👈 enviamos Base64 o string vacío
-      };
-
-      const response = await fetch("http://localhost:5000/api/auth/update", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updatedData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Error en la petición");
+      if (!token) {
+        throw new Error("No hay sesión activa");
       }
+
+      const response = await fetch(
+        "http://localhost:5000/api/auth/create-admin",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            correo: formData.email,
+            contrasena: formData.password,
+          }),
+        }
+      );
 
       const data = await response.json();
-      console.log("👉 Respuesta del backend:", data);
 
-      setSuccessMessage("Información actualizada exitosamente");
-
-      // Actualizar datos en localStorage/sessionStorage
-      const updatedUser = {
-        ...userInfo,
-        ...formData,
-        lugar_nacimiento: userInfo.lugar_nacimiento || "",
-        foto_perfil: photoPreview || userInfo.foto_perfil, // mantener foto previa si no cambió
-      };
-
-      if (localStorage.getItem("userData")) {
-        localStorage.setItem("userData", JSON.stringify(updatedUser));
-      } else {
-        sessionStorage.setItem("userData", JSON.stringify(updatedUser));
+      if (!response.ok) {
+        throw new Error(data.message || "Error al crear administrador");
       }
+
+      setSuccessMessage("Administrador creado exitosamente");
+
+      // Limpiar formulario después de éxito
+      setFormData({
+        email: "",
+        password: "",
+        confirmPassword: "",
+      });
     } catch (err) {
-      setError("Error al actualizar la información. Intenta nuevamente.");
+      setError(err.message || "Error en el servidor. Intenta nuevamente.");
     } finally {
       setIsLoading(false);
     }
   };
-
-
-  if (!userInfo) {
-    return <div>Cargando...</div>;
-  }
-
-  const isAdmin = userInfo.tipo_usuario === "Administrador";
 
   return (
     <div className="app">
@@ -210,10 +132,10 @@ const EditProfile = () => {
       </header>
 
       <section className="login-section">
-        <div className="edit-profile-container">
-          <h2>Editar Información Personal</h2>
+        <div className="login-container">
+          <h2>Crear Administrador</h2>
           <p className="login-subtitle">
-            Actualiza tus datos de {isAdmin ? "administrador" : "usuario"}
+            Complete los datos para crear un nuevo administrador
           </p>
 
           {error && <div className="error-message">⚠️ {error}</div>}
@@ -221,194 +143,66 @@ const EditProfile = () => {
             <div className="success-message">✅ {successMessage}</div>
           )}
 
-          <form className="edit-profile-form" onSubmit={handleSubmit}>
-            <div className="form-columns-horizontal">
-              {/* Columna izquierda - Foto y datos básicos */}
-              <div className="form-column-left">
-                <div className="photo-section">
-                  <label className="photo-label">
-                    Foto de perfil (opcional)
-                  </label>
-                  <div className="photo-upload-container">
-                    {photoPreview ? (
-                      <div className="photo-preview">
-                        <img
-                          src={photoPreview}
-                          alt="Vista previa"
-                          className="preview-image"
-                        />
-                        <button
-                          type="button"
-                          className="remove-photo-btn"
-                          onClick={handleRemovePhoto}
-                          disabled={isLoading}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="photo-upload-area">
-                        <label htmlFor="profilePhoto" className="upload-label">
-                          <span className="upload-icon">📷</span>
-                          <span className="upload-text">Seleccionar foto</span>
-                          <input
-                            id="profilePhoto"
-                            name="profilePhoto"
-                            type="file"
-                            accept="image/*"
-                            onChange={handlePhotoChange}
-                            disabled={isLoading}
-                            style={{ display: "none" }}
-                          />
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                  <small className="photo-hint">
-                    Formatos: JPG, PNG, GIF • Máx. 5MB
-                  </small>
-                </div>
-
-                <div className="input-group">
-                  <label htmlFor="documento">Documento de identidad *</label>
-                  <input
-                    id="documento"
-                    name="documento"
-                    type="text"
-                    value={formData.documento || ""}
-                    onChange={handleChange}
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <div className="input-row">
-                  <div className="input-group">
-                    <label htmlFor="nombre">Nombres *</label>
-                    <input
-                      id="nombre"
-                      name="nombre"
-                      type="text"
-                      value={formData.nombre || ""}
-                      onChange={handleChange}
-                      disabled={isLoading}
-                    />
-                  </div>
-
-                  <div className="input-group">
-                    <label htmlFor="apellido">Apellidos *</label>
-                    <input
-                      id="apellido"
-                      name="apellido"
-                      type="text"
-                      value={formData.apellido || ""}
-                      onChange={handleChange}
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Columna derecha - Información específica */}
-              <div className="form-column-right">
-                {!isAdmin && (
-                  <>
-                    <div className="input-row">
-                      <div className="input-group">
-                        <label htmlFor="fecha_nacimiento">
-                          Fecha de nacimiento
-                        </label>
-                        <input
-                          id="fecha_nacimiento"
-                          name="fecha_nacimiento"
-                          type="date"
-                          value={formData.fecha_nacimiento || ""}
-                          onChange={handleChange}
-                          disabled={isLoading}
-                        />
-                      </div>
-
-                      <div className="input-group">
-                        <label htmlFor="genero">Género</label>
-                        <select
-                          id="genero"
-                          name="genero"
-                          value={formData.genero || ""}
-                          onChange={handleChange}
-                          disabled={isLoading}
-                        >
-                          <option value="">Selecciona tu género</option>
-                          <option value="M">Masculino</option>
-                          <option value="F">Femenino</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="input-group">
-                      <label htmlFor="direccion">
-                        Dirección de facturación
-                      </label>
-                      <input
-                        id="direccion"
-                        name="direccion"
-                        type="text"
-                        value={formData.direccion || ""}
-                        onChange={handleChange}
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="input-group">
-                  <label htmlFor="telefono">Teléfono *</label>
-                  <input
-                    id="telefono"
-                    name="telefono"
-                    type="tel"
-                    value={formData.telefono || ""}
-                    onChange={handleChange}
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <div className="input-group">
-                  <label htmlFor="email">Correo electrónico *</label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email || ""}
-                    onChange={handleChange}
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
+          <form className="login-form" onSubmit={handleSubmit}>
+            <div className="input-group">
+              <label htmlFor="email">Correo electrónico *</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="admin@vivasky.com"
+                disabled={isLoading}
+                className={error && !formData.email ? "input-error" : ""}
+              />
             </div>
 
-            <div className="form-actions">
-              <button
-                type="button"
-                className="cancel-btn"
-                onClick={handleBackToHome}
+            <div className="input-group">
+              <label htmlFor="password">Contraseña *</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Contraseña para el administrador"
                 disabled={isLoading}
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className={`save-btn ${isLoading ? "loading" : ""}`}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <span className="spinner"></span>
-                    Guardando...
-                  </>
-                ) : (
-                  "Guardar Cambios"
-                )}
-              </button>
+                className={error && !formData.password ? "input-error" : ""}
+              />
+              <small className="password-hint">Mínimo 6 caracteres</small>
             </div>
+
+            <div className="input-group">
+              <label htmlFor="confirmPassword">Confirmar contraseña *</label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Confirma la contraseña"
+                disabled={isLoading}
+                className={
+                  error && !formData.confirmPassword ? "input-error" : ""
+                }
+              />
+            </div>
+
+            <button
+              type="submit"
+              className={`login-btn ${isLoading ? "loading" : ""}`}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <span className="spinner"></span>
+                  Creando administrador...
+                </>
+              ) : (
+                "Crear Administrador"
+              )}
+            </button>
           </form>
         </div>
       </section>
@@ -416,4 +210,4 @@ const EditProfile = () => {
   );
 };
 
-export default EditProfile;
+export default CreateAdmin;
