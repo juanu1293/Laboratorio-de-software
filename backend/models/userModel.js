@@ -17,6 +17,15 @@ const createUser = async (userData) => {
     telefono
   } = userData;
 
+  // 🔹 Convertir Base64 a Buffer si viene en ese formato
+  let fotoFinal = null;
+  if (foto && typeof foto === "string" && foto.startsWith("data:image")) {
+    const base64Data = foto.replace(/^data:image\/\w+;base64,/, "");
+    fotoFinal = Buffer.from(base64Data, "base64");
+  } else if (foto) {
+    fotoFinal = foto; // por si en un futuro lo mandas ya como Buffer
+  }
+
   const query = `
     INSERT INTO usuario.usuario
       (nombre, apellido, fecha_nacimiento, lugar_nacimiento, direccion_facturacion, genero, correo, contrasena, foto, tipo_usuario, cedula, telefono)
@@ -34,7 +43,7 @@ const createUser = async (userData) => {
     genero,
     correo,
     contrasena,
-    foto || null,
+    fotoFinal, // 👈 aquí ya va el buffer correcto
     cedula,
     telefono
   ];

@@ -46,12 +46,12 @@ const Register = () => {
         return;
       }
 
-      setProfilePhoto(file);
       setError("");
 
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setPhotoPreview(e.target.result);
+      reader.onloadend = () => {
+        setProfilePhoto(reader.result);   // 👈 ahora se guarda en base64
+        setPhotoPreview(reader.result);   // 👈 también la previsualización
       };
       reader.readAsDataURL(file);
     }
@@ -213,43 +213,21 @@ const Register = () => {
         telefono: formData.phone,
         correo: formData.email,
         contrasena: formData.password,
+        foto: profilePhoto || null, // 👈 foto en base64 (igual que EditProfile)
       };
 
-      if (profilePhoto) {
-        const formDataToSend = new FormData();
-        formDataToSend.append("profilePhoto", profilePhoto);
-        formDataToSend.append("userData", JSON.stringify(userData));
+      const response = await fetch("http://localhost:5000/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData),
+      });
 
-        const response = await fetch(
-          "http://localhost:5000/api/auth/register",
-          {
-            method: "POST",
-            body: formDataToSend,
-          }
-        );
+      const data = await response.json();
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || "Error en el registro");
-        }
-      } else {
-        const response = await fetch(
-          "http://localhost:5000/api/auth/register",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(userData),
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || "Error en el registro");
-        }
+      if (!response.ok) {
+        throw new Error(data.message || "Error en el registro");
       }
 
       localStorage.setItem("userEmail", formData.email);
@@ -263,6 +241,7 @@ const Register = () => {
       setIsLoading(false);
     }
   };
+
 
   const handleBackToHome = () => {
     navigate("/");
