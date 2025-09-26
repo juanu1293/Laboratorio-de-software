@@ -93,6 +93,17 @@ const loginUser = async (req, res) => {
       { expiresIn: "1h" } // 👈 expira en 1 hora
     );
 
+    let fotoBase64 = null;
+    if (user.foto) {
+      fotoBase64 = `data:image/jpeg;base64,${Buffer.from(user.foto).toString("base64")}`;
+    }
+
+    let fechaFormateada = null;
+    if (user.fecha_nacimiento) {
+      const fecha = new Date(user.fecha_nacimiento);
+      fechaFormateada = fecha.toISOString().split("T")[0]; // 👈 "2002-06-04"
+    }
+
     res.status(200).json({
       mensaje: "Login exitoso",
       token, // 👈 ahora enviamos el token
@@ -102,6 +113,12 @@ const loginUser = async (req, res) => {
         apellido: user.apellido,
         correo: user.correo,
         tipo_usuario: user.tipo_usuario,
+        fecha_nacimiento: fechaFormateada,
+        genero: user.genero,
+        direccion_facturacion: user.direccion_facturacion,
+        cedula: user.cedula,
+        telefono: user.telefono,
+        foto: fotoBase64
       },
     });
   } catch (error) {
@@ -111,6 +128,32 @@ const loginUser = async (req, res) => {
 };
 
 const updateUserController = async (req, res) => {
+  try {
+    const id_usuario = req.user.id_usuario; // Del token (authMiddleware)
+    const { fecha_nacimiento, foto, ...rest } = req.body;
+
+    // 🔹 Validar rango de edad si el usuario manda fecha de nacimiento
+    if (fecha_nacimiento) {
+      const birthDate = new Date(fecha_nacimiento);
+      const today = new Date();
+
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+
+      if (age < 18 || age > 80) {
+        return res.status(400).json({
+          error: "La edad debe estar entre 18 y 80 años",
+        });
+      }
+    }
+
+    console.log("Datos recibidos en updateUser:", req.body, "para usuario:", id_usuario);
+
+    // Enviar fotoBuffer junto con el resto de datos
+    const updateUserController = async (req, res) => {
   try {
     const id_usuario = req.user.id_usuario; // Del token (authMiddleware)
     const { fecha_nacimiento, foto, ...rest } = req.body;
