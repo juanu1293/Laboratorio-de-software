@@ -115,7 +115,7 @@ const loginUser = async (req, res) => {
         tipo_usuario: user.tipo_usuario,
         fecha_nacimiento: fechaFormateada,
         genero: user.genero,
-        direccion_facturacion: user.direccion_facturacion,
+        direccion: user.direccion_facturacion,
         cedula: user.cedula,
         telefono: user.telefono,
         foto: fotoBase64
@@ -152,11 +152,17 @@ const updateUserController = async (req, res) => {
 
     console.log("Datos recibidos en updateUser:", req.body, "para usuario:", id_usuario);
 
+    let fotoBuffer = null;
+    if (foto && foto.startsWith("data:image")) {
+      const base64Data = foto.split(",")[1];
+      fotoBuffer = Buffer.from(base64Data, "base64");
+    }
+
     // Enviar fotoBuffer junto con el resto de datos
     const updatedUser = await updateUser(id_usuario, {
       ...rest,
       fecha_nacimiento,
-      foto // aquí pasa el Base64 tal cual
+      foto: fotoBuffer, // aquí pasa el Base64 tal cual
     });
 
     if (!updatedUser) {
@@ -169,7 +175,9 @@ const updateUserController = async (req, res) => {
     });
   } catch (error) {
     console.error("Error en updateUserController:", error);
-    res.status(500).json({ error: "Error al actualizar el usuario" });
+    res.status(500).json({ error: "Error al actualizar el usuario", 
+                                  detalle: error.message, 
+                                  stack: error.stack  });
   }
 };
 
