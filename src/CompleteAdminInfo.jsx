@@ -76,9 +76,13 @@ const CompleteAdminInfo = () => {
       !formData.documento ||
       !formData.nombre ||
       !formData.apellido ||
-      !formData.telefono
+      !formData.telefono ||
+      (typeof formData.documento === "string" && formData.documento.trim() === "") ||
+      (typeof formData.nombre === "string" && formData.nombre.trim() === "") ||
+      (typeof formData.apellido === "string" && formData.apellido.trim() === "") ||
+      (typeof formData.telefono === "string" && formData.telefono.trim() === "")
     ) {
-      setError("Por favor completa toda tu información personal");
+      setError("Por favor completa toda tu información personal sin solo espacios");
       return false;
     }
 
@@ -96,6 +100,14 @@ const CompleteAdminInfo = () => {
 
     // Validar contraseñas (solo si se ingresaron)
     if (formData.password || formData.confirmPassword) {
+      if (
+        (typeof formData.password === "string" && formData.password.trim() === "") ||
+        (typeof formData.confirmPassword === "string" && formData.confirmPassword.trim() === "")
+      ) {
+        setError("La contraseña no puede ser solo espacios");
+        return false;
+      }
+
       if (formData.password.length < 6) {
         setError("La contraseña debe tener al menos 6 caracteres");
         return false;

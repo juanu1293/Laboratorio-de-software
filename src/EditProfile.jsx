@@ -98,14 +98,22 @@ const EditProfile = () => {
   };
 
   const validateForm = () => {
+    // Validar campos obligatorios y que no sean solo espacios
     if (
       !formData.documento ||
       !formData.nombre ||
       !formData.apellido ||
       !formData.telefono ||
-      !formData.email
+      !formData.email ||
+      !formData.direccion ||
+      (typeof formData.documento === "string" && formData.documento.trim() === "") ||
+      (typeof formData.nombre === "string" && formData.nombre.trim() === "") ||
+      (typeof formData.apellido === "string" && formData.apellido.trim() === "") ||
+      (typeof formData.telefono === "string" && formData.telefono.trim() === "") ||
+      (typeof formData.email === "string" && formData.email.trim() === "") ||
+      (typeof formData.direccion === "string" && formData.direccion.trim() === "")
     ) {
-      setError("Por favor completa todos los campos obligatorios");
+      setError("Por favor completa todos los campos obligatorios sin solo espacios");
       return false;
     }
 
