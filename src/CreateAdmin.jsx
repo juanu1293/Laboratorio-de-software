@@ -31,8 +31,15 @@ const CreateAdmin = () => {
   };
 
   const validateForm = () => {
-    if (!formData.email || !formData.password || !formData.confirmPassword) {
-      setError("Por favor completa todos los campos");
+    if (
+      !formData.email ||
+      !formData.password ||
+      !formData.confirmPassword ||
+      (typeof formData.email === "string" && formData.email.trim() === "") ||
+      (typeof formData.password === "string" && formData.password.trim() === "") ||
+      (typeof formData.confirmPassword === "string" && formData.confirmPassword.trim() === "")
+    ) {
+      setError("Por favor completa todos los campos sin solo espacios");
       return false;
     }
 

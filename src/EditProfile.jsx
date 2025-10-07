@@ -41,7 +41,7 @@ const EditProfile = () => {
           genero: user.genero || "",
           telefono: user.telefono || "",
           email: user.correo || "",
-          direccion: user.direccion_facturacion || "",
+          direccion: user.direccion || "",
         });
       }
 
@@ -98,14 +98,22 @@ const EditProfile = () => {
   };
 
   const validateForm = () => {
+    // Validar campos obligatorios y que no sean solo espacios
     if (
       !formData.documento ||
       !formData.nombre ||
       !formData.apellido ||
       !formData.telefono ||
-      !formData.email
+      !formData.email ||
+      !formData.direccion ||
+      (typeof formData.documento === "string" && formData.documento.trim() === "") ||
+      (typeof formData.nombre === "string" && formData.nombre.trim() === "") ||
+      (typeof formData.apellido === "string" && formData.apellido.trim() === "") ||
+      (typeof formData.telefono === "string" && formData.telefono.trim() === "") ||
+      (typeof formData.email === "string" && formData.email.trim() === "") ||
+      (typeof formData.direccion === "string" && formData.direccion.trim() === "")
     ) {
-      setError("Por favor completa todos los campos obligatorios");
+      setError("Por favor completa todos los campos obligatorios sin solo espacios");
       return false;
     }
 
@@ -137,12 +145,14 @@ const EditProfile = () => {
       const token =
         localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
 
-      // ⚡ Incluir la foto Base64 en updatedData
+      // Datos a enviar al backend
       const updatedData = {
         ...formData,
         lugar_nacimiento: userInfo.lugar_nacimiento || "",
-        foto: photoPreview || null, // 👈 enviamos Base64 o string vacío
+        foto: photoPreview || null, // enviamos Base64 o null
       };
+
+      console.log("👉 Datos enviados al backend:", updatedData);
 
       const response = await fetch("http://localhost:5000/api/auth/update", {
         method: "PUT",
@@ -154,7 +164,9 @@ const EditProfile = () => {
       });
 
       if (!response.ok) {
-        throw new Error("Error en la petición");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("👉 Error en la respuesta:", response.status, errorData);
+        throw new Error(errorData.detalle || "Error en la petición");
       }
 
       const data = await response.json();
@@ -167,7 +179,7 @@ const EditProfile = () => {
         ...userInfo,
         ...formData,
         lugar_nacimiento: userInfo.lugar_nacimiento || "",
-        foto_perfil: photoPreview || userInfo.foto, // mantener foto previa si no cambió
+        foto: photoPreview || userInfo.foto, // 👈 mantener consistencia
       };
 
       if (localStorage.getItem("userData")) {
@@ -176,11 +188,13 @@ const EditProfile = () => {
         sessionStorage.setItem("userData", JSON.stringify(updatedUser));
       }
     } catch (err) {
+      console.error("❌ Error en handleSubmit:", err);
       setError("Error al actualizar la información. Intenta nuevamente.");
     } finally {
       setIsLoading(false);
     }
   };
+
 
 
   if (!userInfo) {

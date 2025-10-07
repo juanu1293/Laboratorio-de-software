@@ -130,23 +130,31 @@ const Register = () => {
   };
 
   const validateForm = () => {
-    if (
-      !formData.document ||
-      !formData.firstName ||
-      !formData.lastName ||
-      !formData.birthDate ||
-      !formData.gender ||
-      !formData.country ||
-      !formData.department ||
-      !formData.city ||
-      !formData.billingAddress ||
-      !formData.phone ||
-      !formData.email ||
-      !formData.password ||
-      !formData.confirmPassword
-    ) {
-      setError("Por favor completa todos los campos obligatorios");
-      return false;
+    // Lista de campos obligatorios de texto
+    const requiredFields = [
+      "document",
+      "firstName",
+      "lastName",
+      "birthDate",
+      "gender",
+      "country",
+      "department",
+      "city",
+      "billingAddress",
+      "phone",
+      "email",
+      "password",
+      "confirmPassword",
+    ];
+
+    for (let field of requiredFields) {
+      if (
+        !formData[field] ||
+        (typeof formData[field] === "string" && formData[field].trim() === "")
+      ) {
+        setError("Por favor completa todos los campos obligatorios sin solo espacios");
+        return false;
+      }
     }
 
     if (!/\S+@\S+\.\S+/.test(formData.email)) {

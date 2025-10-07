@@ -70,7 +70,7 @@ const updateUser = async (id_usuario, userData) => {
     direccion,
     genero,
     email,
-    foto,
+    foto,       // aquí llega ya como Buffer desde el controlador
     documento,
     telefono
   } = userData;
@@ -87,26 +87,22 @@ const updateUser = async (id_usuario, userData) => {
 
   const currentData = current.rows[0];
 
-  // 🔹 Usar valor actual si no se envía o está vacío
+  // 🔹 Usar valor actual si no se envía uno nuevo
   const lugarNacimientoFinal =
     lugar_nacimiento && lugar_nacimiento.trim() !== ""
       ? lugar_nacimiento
       : currentData.lugar_nacimiento;
 
-   // 🔹 Convertir Base64 a Buffer aquí
-  let fotoFinal = currentData.foto;
-  if (foto && typeof foto === "string" && foto.startsWith("data:image")) {
-    const base64Data = foto.replace(/^data:image\/\w+;base64,/, "");
-    fotoFinal = Buffer.from(base64Data, "base64");
-  } else if (foto === null) {
-    fotoFinal = null; // Borrar foto
+  // 🔹 Formatear fecha
+  let fechaFinal = fecha_nacimiento || currentData.fecha_nacimiento;
+  if (fechaFinal) {
+    const fecha = new Date(fechaFinal);
+    fechaFinal = fecha.toISOString().split("T")[0]; // yyyy-MM-dd
   }
 
-  if (user.fecha_nacimiento) {
-    const fecha = new Date(user.fecha_nacimiento);
-    user.fecha_nacimiento = fecha.toISOString().split("T")[0];
-  }
-  
+  // 🔹 Si no viene foto nueva, usar la existente
+  const fotoFinal = foto !== undefined ? foto : currentData.foto;
+
   const query = `
     UPDATE usuario.usuario
     SET nombre = $1,
@@ -120,25 +116,37 @@ const updateUser = async (id_usuario, userData) => {
         cedula = $9,
         telefono = $10
     WHERE id_usuario = $11
-    RETURNING id_usuario, nombre, apellido, correo, tipo_usuario, foto, cedula, telefono, fecha_nacimiento, genero, direccion_facturacion, lugar_nacimiento;
+    RETURNING id_usuario, nombre, apellido, correo, tipo_usuario,
+              foto, cedula, telefono, fecha_nacimiento,
+              genero, direccion_facturacion AS direccion, lugar_nacimiento;
   `;
 
   const values = [
     nombre || currentData.nombre,
     apellido || currentData.apellido,
-    fecha_nacimiento || currentData.fecha_nacimiento,
+    fechaFinal,
     lugarNacimientoFinal,
     direccion || currentData.direccion_facturacion,
     genero || currentData.genero,
     email || currentData.correo,
-    fotoFinal, // aquí enviamos el buffer
+    fotoFinal,   // 👈 aquí se guarda bien como Buffer o null
     documento || currentData.cedula,
     telefono || currentData.telefono,
     id_usuario
   ];
 
   const result = await pool.query(query, values);
-  return result.rows[0];
+
+  if (result.rows.length === 0) return null;
+
+  const updatedUser = result.rows[0];
+
+  // 🔹 Convertir foto a base64 antes de devolver
+  if (updatedUser.foto) {
+    updatedUser.foto = `data:image/jpeg;base64,${Buffer.from(updatedUser.foto).toString("base64")}`;
+  }
+
+  return updatedUser;
 };
 
 
@@ -154,3 +162,4 @@ const createAdmin = async ({ correo, contrasena }) => {
 };
 
 module.exports = { createUser, findUserByEmail, updateUser, createAdmin };
+
