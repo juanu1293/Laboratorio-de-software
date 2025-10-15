@@ -135,7 +135,7 @@ const EditProfile = () => {
 
     // Teléfono (solo números, entre 7 y 15 dígitos)
     if (!/^\d{7,15}$/.test(formData.telefono)) {
-      setError("El teléfono debe tener entre 7 y 15 números.");
+      setError("El teléfono debe tener entre 7 y 15 números y solo números.");
       return false;
     }
 
