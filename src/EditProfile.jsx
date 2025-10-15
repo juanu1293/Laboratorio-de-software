@@ -117,13 +117,25 @@ const EditProfile = () => {
       return false;
     }
 
+    // Nombres y apellidos (solo letras, tildes y espacios)
+    const nameRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/;
+    if (!nameRegex.test(formData.nombre)) {
+      setError("El nombre solo puede contener letras y espacios.");
+      return false;
+    }
+    if (!nameRegex.test(formData.apellido)) {
+      setError("El apellido solo puede contener letras y espacios.");
+      return false;
+    }
+
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
       setError("Por favor ingresa un email válido");
       return false;
     }
 
-    if (!/^\d+$/.test(formData.telefono)) {
-      setError("El teléfono debe contener solo números");
+    // Teléfono (solo números, entre 7 y 15 dígitos)
+    if (!/^\d{7,15}$/.test(formData.telefono)) {
+      setError("El teléfono debe tener entre 7 y 15 números.");
       return false;
     }
 

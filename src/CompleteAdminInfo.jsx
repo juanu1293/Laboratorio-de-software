@@ -98,6 +98,17 @@ const CompleteAdminInfo = () => {
       return false;
     }
 
+    // Nombre y apellido: solo letras y tildes
+    const nameRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/;
+    if (!nameRegex.test(nombre)) {
+      setError("El nombre solo puede contener letras y espacios.");
+      return false;
+    }
+    if (!nameRegex.test(apellido)) {
+      setError("El apellido solo puede contener letras y espacios.");
+      return false;
+    }
+
     // Validar contraseñas (solo si se ingresaron)
     if (formData.password || formData.confirmPassword) {
       if (

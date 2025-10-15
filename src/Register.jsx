@@ -147,14 +147,19 @@ const Register = () => {
       "confirmPassword",
     ];
 
+      f// Validar campos vacíos o solo espacios
     for (let field of requiredFields) {
-      if (
-        !formData[field] ||
-        (typeof formData[field] === "string" && formData[field].trim() === "")
-      ) {
-        setError("Por favor completa todos los campos obligatorios sin solo espacios");
+      if (!formData[field] || formData[field].trim() === "") {
+        setError("Por favor completa todos los campos obligatorios.");
         return false;
       }
+    }
+
+     // Validar nombres y apellidos (solo letras, tildes y espacios)
+    const nameRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/;
+    if (!nameRegex.test(formData.firstName) || !nameRegex.test(formData.lastName)) {
+      setError("Los nombres y apellidos solo pueden contener letras y espacios.");
+      return false;
     }
 
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -172,8 +177,9 @@ const Register = () => {
       return false;
     }
 
-    if (!/^\d+$/.test(formData.phone)) {
-      setError("El teléfono debe contener solo números");
+    // Validar teléfono (solo números, mínimo 7 dígitos)
+    if (!/^\d{7,15}$/.test(formData.phone)) {
+      setError("El teléfono debe tener entre 7 y 15 números.");
       return false;
     }
 
