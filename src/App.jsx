@@ -17,6 +17,7 @@ import UserMenu from "./UserMenu";
 import EditProfile from "./EditProfile";
 import CreateAdmin from "./CreateAdmin";
 import CompleteAdminInfo from "./CompleteAdminInfo";
+import SearchFlights from "./SearchFlights";
 
 const App = () => {
   return (
@@ -30,6 +31,7 @@ const App = () => {
         <Route path="/edit-profile" element={<EditProfile />} />
         <Route path="/create-admin" element={<CreateAdmin />} />
         <Route path="/complete-admin-info" element={<CompleteAdminInfo />} />
+        <Route path="/search-flights" element={<SearchFlights />} />
       </Routes>
     </Router>
   );
@@ -180,21 +182,21 @@ const HomePage = () => {
       return;
     }
 
-    // Mostrar información del vuelo en un alert (simulación)
+    // Formatear fechas para mostrar
     const salidaFormateada = formatDisplayDate(departureDate);
     const retornoFormateado =
       tripType === "roundtrip" ? formatDisplayDate(returnDate) : null;
 
-    let mensajeVuelo = `Buscando vuelos de ${origin} a ${destination}\n`;
-    mensajeVuelo += `Salida: ${salidaFormateada}\n`;
-
-    if (tripType === "roundtrip") {
-      mensajeVuelo += `Retorno: ${retornoFormateado}`;
-    } else {
-      mensajeVuelo += "Tipo: Solo ida";
-    }
-
-    alert(mensajeVuelo);
+    // Navegar a la página de resultados de búsqueda
+    navigate("/search-flights", {
+      state: {
+        origin,
+        destination,
+        departureDate: salidaFormateada,
+        returnDate: retornoFormateado,
+        tripType,
+      },
+    });
   };
 
   const handleDepartureDateChange = (e) => {
