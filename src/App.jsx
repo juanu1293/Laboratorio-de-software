@@ -40,8 +40,8 @@ const App = () => {
 // Componente de la página de inicio
 const HomePage = () => {
   const [tripType, setTripType] = useState("roundtrip");
-  const [origin, setOrigin] = useState("Frankfurt am Main");
-  const [destination, setDestination] = useState("Bangkok");
+  const [origin, setOrigin] = useState("");
+  const [destination, setDestination] = useState("");
   const [departureDate, setDepartureDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const [selectedDestination, setSelectedDestination] = useState(null);
@@ -56,6 +56,110 @@ const HomePage = () => {
   // URL de ejemplo para el logo
   const logoUrl =
     "https://i.pinimg.com/736x/60/48/b4/6048b4ae7f74724389d345767e8061a0.jpg";
+
+  // Lista de ciudades colombianas (capitales departamentales)
+  const colombianCities = [
+    "Bogotá",
+    "Medellín",
+    "Cali",
+    "Barranquilla",
+    "Cartagena",
+    "Cúcuta",
+    "Bucaramanga",
+    "Pereira",
+    "Santa Marta",
+    "Ibagué",
+    "Pasto",
+    "Manizales",
+    "Neiva",
+    "Villavicencio",
+    "Armenia",
+    "Valledupar",
+    "Montería",
+    "Sincelejo",
+    "Popayán",
+    "Riohacha",
+    "Tunja",
+    "Florencia",
+    "Quibdó",
+    "Arauca",
+    "Yopal",
+    "Mocoa",
+    "San José del Guaviare",
+    "Leticia",
+    "Mitú",
+    "Puerto Carreño",
+    "San Andrés",
+  ];
+
+  // Ciudades internacionales
+  const internationalCities = [
+    "Madrid",
+    "Londres",
+    "New York",
+    "Buenos Aires",
+    "Miami",
+  ];
+
+  // Ciudades colombianas que pueden acceder a destinos internacionales
+  const internationalGateways = [
+    "Pereira",
+    "Bogotá",
+    "Medellín",
+    "Cali",
+    "Cartagena",
+  ];
+
+  // Todas las ciudades disponibles para origen (colombianas + internacionales)
+  const allOrigins = [...colombianCities, ...internationalCities];
+
+  // Función para obtener destinos disponibles según el origen seleccionado
+  const getAvailableDestinations = (selectedOrigin) => {
+    if (!selectedOrigin) return [...colombianCities, ...internationalCities];
+
+    // Si el origen es una ciudad internacional, solo puede volar a ciudades gateway colombianas
+    if (internationalCities.includes(selectedOrigin)) {
+      return internationalGateways;
+    }
+
+    // Si el origen es una ciudad gateway colombiana, puede volar a todas las ciudades (excepto sí misma)
+    if (internationalGateways.includes(selectedOrigin)) {
+      return [
+        ...colombianCities.filter((city) => city !== selectedOrigin),
+        ...internationalCities,
+      ];
+    }
+
+    // Si el origen es una ciudad colombiana NO gateway, solo puede volar a ciudades colombianas (excepto sí misma)
+    return colombianCities.filter((city) => city !== selectedOrigin);
+  };
+
+  // Función para validar si una ruta es permitida
+  const isValidRoute = (originCity, destinationCity) => {
+    // Si el origen es internacional, solo puede volar a ciudades gateway colombianas
+    if (internationalCities.includes(originCity)) {
+      return internationalGateways.includes(destinationCity);
+    }
+
+    // Si el destino es colombiano, cualquier origen colombiano puede ir allí
+    if (colombianCities.includes(destinationCity)) {
+      return true;
+    }
+
+    // Si el destino es internacional, solo los gateways colombianos pueden ir allí
+    if (internationalCities.includes(destinationCity)) {
+      return internationalGateways.includes(originCity);
+    }
+
+    return false;
+  };
+
+  // Función para obtener el tipo de ciudad
+  const getCityType = (city) => {
+    if (internationalCities.includes(city)) return "international";
+    if (internationalGateways.includes(city)) return "gateway";
+    return "colombian";
+  };
 
   // Función para mostrar el mensaje de "próximamente"
   const handleComingSoon = () => {
@@ -173,6 +277,33 @@ const HomePage = () => {
   const handleSearch = async (e) => {
     e.preventDefault();
 
+    // Validar que se hayan seleccionado origen y destino
+    if (!origin || !destination) {
+      alert("Por favor selecciona una ciudad de origen y destino");
+      return;
+    }
+
+    // Validar si la ruta es permitida
+    if (!isValidRoute(origin, destination)) {
+      const originType = getCityType(origin);
+      const destinationType = getCityType(destination);
+
+      if (originType === "international") {
+        alert(
+          `Lo sentimos. Desde ${origin} solo hay vuelos disponibles hacia las ciudades gateway colombianas: Pereira, Bogotá, Medellín, Cali y Cartagena.`
+        );
+      } else if (destinationType === "international") {
+        alert(
+          `Lo sentimos. Desde ${origin} no hay vuelos disponibles hacia ${destination}. Solo las ciudades de Pereira, Bogotá, Medellín, Cali y Cartagena pueden volar a destinos internacionales.`
+        );
+      } else {
+        alert(
+          `Lo sentimos. No hay vuelos disponibles desde ${origin} hacia ${destination}.`
+        );
+      }
+      return;
+    }
+
     // Validación de fechas solo para viajes redondos
     if (
       tripType === "roundtrip" &&
@@ -182,18 +313,14 @@ const HomePage = () => {
       return;
     }
 
-    // Formatear fechas para mostrar
-    const salidaFormateada = formatDisplayDate(departureDate);
-    const retornoFormateado =
-      tripType === "roundtrip" ? formatDisplayDate(returnDate) : null;
-
     // Navegar a la página de resultados de búsqueda
     navigate("/search-flights", {
       state: {
         origin,
         destination,
-        departureDate: salidaFormateada,
-        returnDate: retornoFormateado,
+        departureDate: formatDisplayDate(departureDate),
+        returnDate:
+          tripType === "roundtrip" ? formatDisplayDate(returnDate) : null,
         tripType,
       },
     });
@@ -323,20 +450,96 @@ const HomePage = () => {
             <div className="form-fields">
               <div className="input-group">
                 <label>Salida</label>
-                <input
-                  type="text"
+                <select
                   value={origin}
-                  onChange={(e) => setOrigin(e.target.value)}
-                />
+                  onChange={(e) => {
+                    setOrigin(e.target.value);
+                    setDestination(""); // Reset destination when origin changes
+                  }}
+                  required
+                  className={!origin ? "required-empty" : ""} // ← Cambiado aquí
+                >
+                  <option value="">Selecciona una ciudad de origen</option>
+                  <optgroup label="🌍 Ciudades Internacionales">
+                    {internationalCities.map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🇨🇴 Ciudades Colombianas">
+                    {colombianCities.map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                        {internationalGateways.includes(city) && " "}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
               </div>
 
               <div className="input-group">
                 <label>Destino</label>
-                <input
-                  type="text"
+                <select
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
-                />
+                  required
+                  className={!destination ? "required-empty" : ""} // ← Cambiado aquí
+                  disabled={!origin}
+                >
+                  <option value="">
+                    {origin
+                      ? `Selecciona un destino desde ${origin}`
+                      : "Primero selecciona un origen"}
+                  </option>
+                  {origin && (
+                    <>
+                      {getAvailableDestinations(origin).some((city) =>
+                        internationalCities.includes(city)
+                      ) && (
+                        <optgroup label="🌍 Destinos Internacionales">
+                          {getAvailableDestinations(origin)
+                            .filter((city) =>
+                              internationalCities.includes(city)
+                            )
+                            .map((city) => (
+                              <option key={city} value={city}>
+                                {city}
+                              </option>
+                            ))}
+                        </optgroup>
+                      )}
+                      <optgroup label="🇨🇴 Destinos Colombianos">
+                        {getAvailableDestinations(origin)
+                          .filter((city) => colombianCities.includes(city))
+                          .map((city) => (
+                            <option key={city} value={city}>
+                              {city}
+                              {internationalGateways.includes(city) && " "}
+                            </option>
+                          ))}
+                      </optgroup>
+                    </>
+                  )}
+                </select>
+                {origin && (
+                  <small
+                    style={{
+                      color: internationalCities.includes(origin)
+                        ? "#28a745"
+                        : "#0077b6",
+                      fontSize: "12px",
+                      marginTop: "5px",
+                      display: "block",
+                    }}
+                  >
+                    {internationalCities.includes(origin)
+                      ? `✅ Desde ${origin} puedes volar a ciudades gateway colombianas`
+                      : internationalGateways.includes(origin)
+                      ? "✅ Puedes volar a destinos nacionales e internacionales"
+                      : "✅ Puedes volar a destinos nacionales"}
+                  </small>
+                )}
               </div>
 
               <div className="input-group">
