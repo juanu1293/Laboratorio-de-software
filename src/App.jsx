@@ -46,6 +46,7 @@ const HomePage = () => {
   const [returnDate, setReturnDate] = useState("");
   const [selectedDestination, setSelectedDestination] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showReservationModal, setShowReservationModal] = useState(false); // Nuevo estado para modal de reserva
   const [userInfo, setUserInfo] = useState(null);
   const [welcomeMessage, setWelcomeMessage] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -161,9 +162,31 @@ const HomePage = () => {
     return "colombian";
   };
 
-  // Función para mostrar el mensaje de "próximamente"
+  // Función para mostrar el mensaje de "próximamente" - MODIFICADA
   const handleComingSoon = () => {
     alert("Esta funcionalidad estará activa próximamente");
+  };
+
+  // NUEVA FUNCIÓN: Manejar click en Reservar
+  const handleReservarClick = () => {
+    setShowReservationModal(true);
+  };
+
+  // NUEVA FUNCIÓN: Cerrar modal de reserva
+  const closeReservationModal = () => {
+    setShowReservationModal(false);
+  };
+
+  // NUEVA FUNCIÓN: Ir a login desde modal de reserva
+  const handleGoToLogin = () => {
+    setShowReservationModal(false);
+    navigate("/login");
+  };
+
+  // NUEVA FUNCIÓN: Ir a registro desde modal de reserva
+  const handleGoToRegister = () => {
+    setShowReservationModal(false);
+    navigate("/register");
   };
 
   // Función para redirigir al inicio al hacer clic en el logo
@@ -392,7 +415,9 @@ const HomePage = () => {
           <UserMenu userInfo={userInfo} onLogout={handleLogout} />
         ) : (
           <nav className="navigation">
-            <a href="#" onClick={handleComingSoon}>
+            <a href="#" onClick={handleReservarClick}>
+              {" "}
+              {/* MODIFICADO: Ahora abre el modal */}
               Reservar
             </a>
             <a href="#" onClick={handleComingSoon}>
@@ -457,7 +482,7 @@ const HomePage = () => {
                     setDestination(""); // Reset destination when origin changes
                   }}
                   required
-                  className={!origin ? "required-empty" : ""} // ← Cambiado aquí
+                  className={!origin ? "required-empty" : ""}
                 >
                   <option value="">Selecciona una ciudad de origen</option>
                   <optgroup label="🌍 Ciudades Internacionales">
@@ -471,7 +496,7 @@ const HomePage = () => {
                     {colombianCities.map((city) => (
                       <option key={city} value={city}>
                         {city}
-                        {internationalGateways.includes(city) && " "}
+                        {internationalGateways.includes(city) && ""}
                       </option>
                     ))}
                   </optgroup>
@@ -484,7 +509,7 @@ const HomePage = () => {
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
                   required
-                  className={!destination ? "required-empty" : ""} // ← Cambiado aquí
+                  className={!destination ? "required-empty" : ""}
                   disabled={!origin}
                 >
                   <option value="">
@@ -642,6 +667,53 @@ const HomePage = () => {
                 onClick={handleComingSoon}
               >
                 Elegir promoción
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NUEVO MODAL: Para reservar sin estar autenticado */}
+      {showReservationModal && (
+        <div className="modal-overlay" onClick={closeReservationModal}>
+          <div
+            className="reservation-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button className="modal-close" onClick={closeReservationModal}>
+              ×
+            </button>
+            <div className="modal-content">
+              <h2>¿Ya tienes una cuenta?</h2>
+              <p className="modal-subtitle">
+                Para realizar reservas necesitas tener una cuenta en VivaSky
+              </p>
+
+              <div className="reservation-options">
+                <button
+                  className="reservation-option-btn primary"
+                  onClick={handleGoToLogin}
+                >
+                  Iniciar Sesión
+                </button>
+
+                <div className="reservation-divider">
+                  <span>o</span>
+                </div>
+
+                <button
+                  className="reservation-option-btn secondary"
+                  onClick={handleGoToRegister}
+                >
+                  Registrar Usuario
+                </button>
+              </div>
+
+              <button
+                className="reservation-cancel-btn"
+                onClick={closeReservationModal}
+              >
+                Cancelar
               </button>
             </div>
           </div>
