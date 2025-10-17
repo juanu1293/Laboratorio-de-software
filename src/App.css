@@ -1683,3 +1683,107 @@ select:disabled {
   border-color: #dc3545 !important;
   box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2) !important;
 }
+/* Estilo para información de zona horaria */
+.timezone-info {
+  font-size: 0.7rem;
+  color: #0077b6;
+  margin-top: 2px;
+  font-weight: 500;
+}
+/* Estilos para el modal de reserva */
+.reservation-modal {
+  background-color: white;
+  border-radius: 12px;
+  max-width: 450px;
+  width: 100%;
+  padding: 30px;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.reservation-modal h2 {
+  text-align: center;
+  margin-bottom: 10px;
+  color: #333;
+  font-size: 24px;
+}
+
+.modal-subtitle {
+  text-align: center;
+  color: #666;
+  margin-bottom: 30px;
+  font-size: 14px;
+}
+
+.reservation-options {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.reservation-option-btn {
+  padding: 15px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  width: 100%;
+}
+
+.reservation-option-btn.primary {
+  background-color: #023e8a;
+  color: white;
+}
+
+.reservation-option-btn.primary:hover {
+  background-color: #0077b6;
+}
+
+.reservation-option-btn.secondary {
+  background-color: transparent;
+  color: #023e8a;
+  border: 2px solid #023e8a;
+}
+
+.reservation-option-btn.secondary:hover {
+  background-color: #023e8a;
+  color: white;
+}
+
+.reservation-divider {
+  display: flex;
+  align-items: center;
+  margin: 10px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.reservation-divider::before,
+.reservation-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #ddd;
+}
+
+.reservation-divider span {
+  padding: 0 15px;
+}
+
+.reservation-cancel-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.reservation-cancel-btn:hover {
+  background-color: #5a6268;
+}
