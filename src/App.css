@@ -1666,3 +1666,20 @@ select:disabled {
 .flight-card.with-return {
   background: linear-gradient(to bottom, white 0%, white 60%, #f8f9fa 100%);
 }
+/* Estilos para campos obligatorios vacíos */
+.required-empty {
+  border-color: #ddd !important;
+  box-shadow: none !important;
+  background-color: #fff;
+}
+
+.required-empty:focus {
+  border-color: #1a237e !important;
+  box-shadow: 0 0 0 2px rgba(26, 35, 126, 0.2) !important;
+}
+
+/* Mantener el estilo de error real para cuando hay validación fallida */
+.input-error {
+  border-color: #dc3545 !important;
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2) !important;
+}
