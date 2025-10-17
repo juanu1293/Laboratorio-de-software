@@ -37,9 +37,8 @@ const SearchFlights = () => {
       },
       duration: "11h 30m",
       stops: "Directo",
-      price: "€ 650",
+      price: "$ ****",
       priceNumber: 650,
-      baggage: "23kg",
       airlineLogo: "✈️",
     },
     {
@@ -60,9 +59,8 @@ const SearchFlights = () => {
       },
       duration: "10h 50m",
       stops: "Directo",
-      price: "€ 720",
+      price: "$ ****",
       priceNumber: 720,
-      baggage: "20kg",
       airlineLogo: "✈️",
     },
     {
@@ -83,7 +81,7 @@ const SearchFlights = () => {
       },
       duration: "13h 15m",
       stops: "1 escala (Dubai)",
-      price: "€ 580",
+      price: "$ ******",
       priceNumber: 580,
       baggage: "25kg",
       airlineLogo: "✈️",
@@ -160,8 +158,6 @@ const SearchFlights = () => {
               <option value="recommended">Recomendado</option>
               <option value="price-low">Precio (más bajo)</option>
               <option value="price-high">Precio (más alto)</option>
-              <option value="duration">Duración</option>
-              <option value="departure">Salida más temprana</option>
             </select>
           </div>
 
@@ -174,8 +170,6 @@ const SearchFlights = () => {
             >
               <option value="all">Todos los vuelos</option>
               <option value="direct">Solo directos</option>
-              <option value="baggage">Equipaje incluido</option>
-              <option value="morning">Salida matutina</option>
             </select>
           </div>
         </div>
