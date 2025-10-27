@@ -941,8 +941,6 @@ const SearchFlights = () => {
               <option value="recommended">Recomendado</option>
               <option value="price-low">Precio (más bajo)</option>
               <option value="price-high">Precio (más alto)</option>
-              <option value="duration-short">Duración (más corta)</option>
-              <option value="duration-long">Duración (más larga)</option>
               <option value="departure-early">Salida (más temprano)</option>
               <option value="departure-late">Salida (más tarde)</option>
             </select>
@@ -1091,3 +1089,4 @@ const SearchFlights = () => {
 };
 
 export default SearchFlights;
+
