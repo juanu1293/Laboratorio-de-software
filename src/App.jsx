@@ -422,7 +422,7 @@ const HomePage = () => {
             <a href="#" onClick={handleReservarClick}>
               {" "}
               {/* MODIFICADO: Ahora abre el modal */}
-              Reservar
+              Reservas
             </a>
             <a href="#" onClick={handleComingSoon}>
               Noticias
