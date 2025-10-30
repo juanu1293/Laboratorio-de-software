@@ -9,15 +9,15 @@ const SearchFlights = () => {
   const [userInfo, setUserInfo] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [filteredFlights, setFilteredFlights] = useState([]);
-
-  // Obtener parámetros de búsqueda si vienen del home
-  const searchParams = location.state || {
-    origin: "Bogotá",
-    destination: "Medellín",
-    departureDate: "Vie, 15 Nov",
-    returnDate: "Vie, 22 Nov",
-    tripType: "roundtrip",
-  };
+  const [searchParams, setSearchParams] = useState(
+    location.state || {
+      origin: "Bogotá",
+      destination: "Medellín",
+      departureDate: "Vie, 15 Nov",
+      returnDate: "Vie, 22 Nov",
+      tripType: "roundtrip",
+    }
+  );
 
   // Verificar autenticación al cargar el componente
   useEffect(() => {
@@ -29,6 +29,31 @@ const SearchFlights = () => {
     applySorting();
   }, [sortOption, searchParams]);
 
+  // Efecto para actualizar cuando lleguen nuevos parámetros
+  useEffect(() => {
+    if (location.state && location.state.origin) {
+      setSearchParams(location.state);
+      setFilteredFlights(generateFlightResults(location.state));
+    }
+  }, [location.state]);
+
+  const canMakeReservations = () => {
+    return !isAdminUser() && !isRootUser();
+  };
+
+  const isAdminUser = () => {
+    const adminRoles = ["Administrador", "administrador", "admin"];
+    return adminRoles.includes(userInfo?.role);
+  };
+
+  const isRootUser = () => {
+    return userInfo?.role === "root";
+  };
+
+  const isClientUser = () => {
+    const clientRoles = ["Usuario", "Cliente", "usuario", "cliente"];
+    return clientRoles.includes(userInfo?.role) || !userInfo?.role;
+  };
   const checkAuth = () => {
     const authToken =
       localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
@@ -63,10 +88,17 @@ const SearchFlights = () => {
     navigate("/");
   };
 
-  // Función para mostrar el menú de usuario (similar al de HomePage)
+  // Función para mostrar el menú de usuario
   const UserMenu = ({ userInfo, onLogout }) => {
     const [showMenu, setShowMenu] = useState(false);
-
+    const isClientUser = () => {
+      const clientRoles = ["Usuario", "Cliente", "usuario", "cliente"];
+      return clientRoles.includes(userInfo.role) || !userInfo.role;
+    };
+    const getCartItemCount = () => {
+      const cart = JSON.parse(localStorage.getItem("vivasky_cart") || "[]");
+      return cart.length;
+    };
     return (
       <div className="user-menu-container">
         <button
@@ -110,7 +142,24 @@ const SearchFlights = () => {
                 <span className="menu-icon">🔒</span>
                 Cambiar Contraseña
               </button>
-
+              {isClientUser() && (
+                <>
+                  <div className="menu-divider"></div>
+                  <button
+                    className="menu-item"
+                    onClick={() => {
+                      setShowMenu(false);
+                      navigate("/cart");
+                    }}
+                  >
+                    <span className="menu-icon">🛒</span>
+                    Carrito de Compras
+                    {getCartItemCount() > 0 && (
+                      <span className="cart-badge">{getCartItemCount()}</span>
+                    )}
+                  </button>
+                </>
+              )}
               <div className="menu-divider"></div>
 
               <div className="menu-section-title">Administración</div>
@@ -528,7 +577,7 @@ const SearchFlights = () => {
 
   // Función para aplicar ordenamientos
   const applySorting = () => {
-    let flights = generateFlightResults();
+    let flights = generateFlightResults(searchParams);
 
     // Aplicar ordenamientos
     switch (sortOption) {
@@ -597,7 +646,7 @@ const SearchFlights = () => {
   };
 
   // Datos de ejemplo para vuelos - CON PRECIOS VARIADOS
-  const generateFlightResults = () => {
+  const generateFlightResults = (currentSearchParams = searchParams) => {
     try {
       const baseFlights = [
         {
@@ -605,40 +654,43 @@ const SearchFlights = () => {
           airline: "VivaSky Airlines",
           flightNumber: "VS202",
           departure: {
-            city: searchParams.origin,
+            city: currentSearchParams.origin,
             time: "08:00",
-            date: searchParams.departureDate,
-            airport: getAirportCode(searchParams.origin),
+            date: currentSearchParams.departureDate,
+            airport: getAirportCode(currentSearchParams.origin),
           },
           arrival: {
-            city: searchParams.destination,
+            city: currentSearchParams.destination,
             time: calculateArrivalTime(
               "08:00",
-              getFlightDuration(searchParams.origin, searchParams.destination),
-              searchParams.origin,
-              searchParams.destination
+              getFlightDuration(
+                currentSearchParams.origin,
+                currentSearchParams.destination
+              ),
+              currentSearchParams.origin,
+              currentSearchParams.destination
             ),
-            date: searchParams.departureDate,
-            airport: getAirportCode(searchParams.destination),
+            date: currentSearchParams.departureDate,
+            airport: getAirportCode(currentSearchParams.destination),
           },
           duration: getFlightDuration(
-            searchParams.origin,
-            searchParams.destination
+            currentSearchParams.origin,
+            currentSearchParams.destination
           ),
           stops: "Directo",
           price: calculatePrice(
-            searchParams.origin,
-            searchParams.destination,
+            currentSearchParams.origin,
+            currentSearchParams.destination,
             1
           ),
           priceNumber: calculatePriceNumber(
-            searchParams.origin,
-            searchParams.destination,
+            currentSearchParams.origin,
+            currentSearchParams.destination,
             1
           ),
           baggage: isInternationalFlight(
-            searchParams.origin,
-            searchParams.destination
+            currentSearchParams.origin,
+            currentSearchParams.destination
           )
             ? "23kg"
             : "15kg",
@@ -649,40 +701,43 @@ const SearchFlights = () => {
           airline: "VivaSky Airlines",
           flightNumber: "VS455",
           departure: {
-            city: searchParams.origin,
+            city: currentSearchParams.origin,
             time: "14:20",
-            date: searchParams.departureDate,
-            airport: getAirportCode(searchParams.origin),
+            date: currentSearchParams.departureDate,
+            airport: getAirportCode(currentSearchParams.origin),
           },
           arrival: {
-            city: searchParams.destination,
+            city: currentSearchParams.destination,
             time: calculateArrivalTime(
               "14:20",
-              getFlightDuration(searchParams.origin, searchParams.destination),
-              searchParams.origin,
-              searchParams.destination
+              getFlightDuration(
+                currentSearchParams.origin,
+                currentSearchParams.destination
+              ),
+              currentSearchParams.origin,
+              currentSearchParams.destination
             ),
-            date: searchParams.departureDate,
-            airport: getAirportCode(searchParams.destination),
+            date: currentSearchParams.departureDate,
+            airport: getAirportCode(currentSearchParams.destination),
           },
           duration: getFlightDuration(
-            searchParams.origin,
-            searchParams.destination
+            currentSearchParams.origin,
+            currentSearchParams.destination
           ),
           stops: "Directo",
           price: calculatePrice(
-            searchParams.origin,
-            searchParams.destination,
+            currentSearchParams.origin,
+            currentSearchParams.destination,
             2
           ),
           priceNumber: calculatePriceNumber(
-            searchParams.origin,
-            searchParams.destination,
+            currentSearchParams.origin,
+            currentSearchParams.destination,
             2
           ),
           baggage: isInternationalFlight(
-            searchParams.origin,
-            searchParams.destination
+            currentSearchParams.origin,
+            currentSearchParams.destination
           )
             ? "23kg"
             : "15kg",
@@ -693,40 +748,43 @@ const SearchFlights = () => {
           airline: "VivaSky Airlines",
           flightNumber: "VS789",
           departure: {
-            city: searchParams.origin,
+            city: currentSearchParams.origin,
             time: "11:30",
-            date: searchParams.departureDate,
-            airport: getAirportCode(searchParams.origin),
+            date: currentSearchParams.departureDate,
+            airport: getAirportCode(currentSearchParams.origin),
           },
           arrival: {
-            city: searchParams.destination,
+            city: currentSearchParams.destination,
             time: calculateArrivalTime(
               "11:30",
-              getFlightDuration(searchParams.origin, searchParams.destination),
-              searchParams.origin,
-              searchParams.destination
+              getFlightDuration(
+                currentSearchParams.origin,
+                currentSearchParams.destination
+              ),
+              currentSearchParams.origin,
+              currentSearchParams.destination
             ),
-            date: searchParams.departureDate,
-            airport: getAirportCode(searchParams.destination),
+            date: currentSearchParams.departureDate,
+            airport: getAirportCode(currentSearchParams.destination),
           },
           duration: getFlightDuration(
-            searchParams.origin,
-            searchParams.destination
+            currentSearchParams.origin,
+            currentSearchParams.destination
           ),
           stops: "Directo",
           price: calculatePrice(
-            searchParams.origin,
-            searchParams.destination,
+            currentSearchParams.origin,
+            currentSearchParams.destination,
             3
           ),
           priceNumber: calculatePriceNumber(
-            searchParams.origin,
-            searchParams.destination,
+            currentSearchParams.origin,
+            currentSearchParams.destination,
             3
           ),
           baggage: isInternationalFlight(
-            searchParams.origin,
-            searchParams.destination
+            currentSearchParams.origin,
+            currentSearchParams.destination
           )
             ? "23kg"
             : "15kg",
@@ -737,40 +795,43 @@ const SearchFlights = () => {
           airline: "VivaSky Airlines",
           flightNumber: "VS321",
           departure: {
-            city: searchParams.origin,
+            city: currentSearchParams.origin,
             time: "06:15",
-            date: searchParams.departureDate,
-            airport: getAirportCode(searchParams.origin),
+            date: currentSearchParams.departureDate,
+            airport: getAirportCode(currentSearchParams.origin),
           },
           arrival: {
-            city: searchParams.destination,
+            city: currentSearchParams.destination,
             time: calculateArrivalTime(
               "06:15",
-              getFlightDuration(searchParams.origin, searchParams.destination),
-              searchParams.origin,
-              searchParams.destination
+              getFlightDuration(
+                currentSearchParams.origin,
+                currentSearchParams.destination
+              ),
+              currentSearchParams.origin,
+              currentSearchParams.destination
             ),
-            date: searchParams.departureDate,
-            airport: getAirportCode(searchParams.destination),
+            date: currentSearchParams.departureDate,
+            airport: getAirportCode(currentSearchParams.destination),
           },
           duration: getFlightDuration(
-            searchParams.origin,
-            searchParams.destination
+            currentSearchParams.origin,
+            currentSearchParams.destination
           ),
           stops: "Directo",
           price: calculatePrice(
-            searchParams.origin,
-            searchParams.destination,
+            currentSearchParams.origin,
+            currentSearchParams.destination,
             4
           ),
           priceNumber: calculatePriceNumber(
-            searchParams.origin,
-            searchParams.destination,
+            currentSearchParams.origin,
+            currentSearchParams.destination,
             4
           ),
           baggage: isInternationalFlight(
-            searchParams.origin,
-            searchParams.destination
+            currentSearchParams.origin,
+            currentSearchParams.destination
           )
             ? "23kg"
             : "15kg",
@@ -781,40 +842,43 @@ const SearchFlights = () => {
           airline: "VivaSky Airlines",
           flightNumber: "VS654",
           departure: {
-            city: searchParams.origin,
+            city: currentSearchParams.origin,
             time: "19:45",
-            date: searchParams.departureDate,
-            airport: getAirportCode(searchParams.origin),
+            date: currentSearchParams.departureDate,
+            airport: getAirportCode(currentSearchParams.origin),
           },
           arrival: {
-            city: searchParams.destination,
+            city: currentSearchParams.destination,
             time: calculateArrivalTime(
               "19:45",
-              getFlightDuration(searchParams.origin, searchParams.destination),
-              searchParams.origin,
-              searchParams.destination
+              getFlightDuration(
+                currentSearchParams.origin,
+                currentSearchParams.destination
+              ),
+              currentSearchParams.origin,
+              currentSearchParams.destination
             ),
-            date: searchParams.departureDate,
-            airport: getAirportCode(searchParams.destination),
+            date: currentSearchParams.departureDate,
+            airport: getAirportCode(currentSearchParams.destination),
           },
           duration: getFlightDuration(
-            searchParams.origin,
-            searchParams.destination
+            currentSearchParams.origin,
+            currentSearchParams.destination
           ),
           stops: "Directo",
           price: calculatePrice(
-            searchParams.origin,
-            searchParams.destination,
+            currentSearchParams.origin,
+            currentSearchParams.destination,
             5
           ),
           priceNumber: calculatePriceNumber(
-            searchParams.origin,
-            searchParams.destination,
+            currentSearchParams.origin,
+            currentSearchParams.destination,
             5
           ),
           baggage: isInternationalFlight(
-            searchParams.origin,
-            searchParams.destination
+            currentSearchParams.origin,
+            currentSearchParams.destination
           )
             ? "23kg"
             : "15kg",
@@ -832,16 +896,16 @@ const SearchFlights = () => {
           airline: "VivaSky Airlines",
           flightNumber: "VS202",
           departure: {
-            city: searchParams.origin,
+            city: currentSearchParams.origin,
             time: "08:00",
-            date: searchParams.departureDate,
-            airport: getAirportCode(searchParams.origin),
+            date: currentSearchParams.departureDate,
+            airport: getAirportCode(currentSearchParams.origin),
           },
           arrival: {
-            city: searchParams.destination,
+            city: currentSearchParams.destination,
             time: "22:30",
-            date: searchParams.departureDate,
-            airport: getAirportCode(searchParams.destination),
+            date: currentSearchParams.departureDate,
+            airport: getAirportCode(currentSearchParams.destination),
           },
           duration: "9h 30m",
           stops: "Directo",
@@ -871,6 +935,55 @@ const SearchFlights = () => {
     });
   };
 
+  // NUEVA FUNCIÓN: Agregar directamente al carrito
+  const handleAddToCartDirectly = (flight) => {
+    if (!isAuthenticated) {
+      alert("⚠️ Debes iniciar sesión para agregar vuelos al carrito");
+      navigate("/login", { state: { from: location.pathname } });
+      return;
+    }
+    if (!canMakeReservations()) {
+      showAdminRestrictionMessage();
+      return;
+    }
+    const cartItem = {
+      ...flight,
+      searchParams: searchParams,
+      selectedClass: "economy", // Clase por defecto
+      addedAt: new Date().toISOString(),
+      totalPrice: flight.priceNumber,
+      cartId: `${flight.id}-economy-${Date.now()}`,
+    };
+
+    const existingCart = JSON.parse(
+      localStorage.getItem("vivasky_cart") || "[]"
+    );
+
+    // Verificar si ya existe este vuelo exacto
+    const exists = existingCart.some(
+      (item) =>
+        item.id === flight.id &&
+        item.searchParams?.origin === searchParams.origin &&
+        item.searchParams?.destination === searchParams.destination &&
+        item.selectedClass === "economy"
+    );
+
+    if (!exists) {
+      existingCart.push(cartItem);
+      localStorage.setItem("vivasky_cart", JSON.stringify(existingCart));
+      alert(`✅ Vuelo ${flight.flightNumber} agregado al carrito`);
+
+      // Forzar re-render del componente para actualizar la UI
+      setFilteredFlights([...filteredFlights]);
+    } else {
+      alert("⚠️ Este vuelo ya está en tu carrito");
+    }
+  };
+  const showAdminRestrictionMessage = () => {
+    alert(
+      `⛔ Acción no permitida\n\nLos usuarios con rol de "${userInfo.role}" no pueden realizar reservas ni compras de vuelos.\n\nEsta función está disponible únicamente para usuarios regulares (Cliente/Usuario).`
+    );
+  };
   return (
     <div className="app">
       {/* Header */}
@@ -959,7 +1072,7 @@ const SearchFlights = () => {
         <div className="results-container">
           {filteredFlights.length > 0 ? (
             filteredFlights.map((flight) => (
-              <div key={flight.id} className="flight-card">
+              <div key={`${flight.id}-${Date.now()}`} className="flight-card">
                 <div className="flight-header">
                   <div className="airline-info">
                     <span className="airline-logo">{flight.airlineLogo}</span>
@@ -1073,6 +1186,35 @@ const SearchFlights = () => {
                       ? "Seleccionar vuelo ida y vuelta"
                       : "Seleccionar vuelo"}
                   </button>
+
+                  {/* BOTÓN PARA AGREGAR DIRECTAMENTE AL CARRITO */}
+                  {isAuthenticated && (
+                    <button
+                      className={`book-btn ${
+                        !canMakeReservations() ? "disabled-btn" : ""
+                      }`}
+                      style={{
+                        backgroundColor: canMakeReservations()
+                          ? "#28a745"
+                          : "#6c757d",
+                        marginTop: "10px",
+                        cursor: canMakeReservations()
+                          ? "pointer"
+                          : "not-allowed",
+                        opacity: canMakeReservations() ? 1 : 0.6,
+                      }}
+                      onClick={() => handleAddToCartDirectly(flight)}
+                      title={
+                        !canMakeReservations()
+                          ? `Los usuarios ${userInfo?.role} no pueden realizar compras`
+                          : ""
+                      }
+                    >
+                      {canMakeReservations()
+                        ? "🛒 Agregar al Carrito"
+                        : `⛔ Solo para Clientes`}
+                    </button>
+                  )}
                 </div>
               </div>
             ))
@@ -1089,4 +1231,3 @@ const SearchFlights = () => {
 };
 
 export default SearchFlights;
-
