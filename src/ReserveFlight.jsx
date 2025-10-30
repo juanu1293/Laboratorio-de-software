@@ -11,6 +11,8 @@ const ReserveFlight = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("flight");
   const [userRole, setUserRole] = useState("");
+  const [selectedClass, setSelectedClass] = useState(""); // Debe estar vacío
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false); // Nuevo estado para el modal
 
   // Verificar autenticación y obtener datos del vuelo
   useEffect(() => {
@@ -21,7 +23,6 @@ const ReserveFlight = () => {
       return;
     }
 
-    // Obtener datos del vuelo desde location.state
     if (location.state && location.state.flight) {
       setFlightData(location.state.flight);
       setLoading(false);
@@ -62,18 +63,19 @@ const ReserveFlight = () => {
 
   // Verificar si el usuario puede reservar/comprar
   const canMakeReservations = () => {
-    // Solo los usuarios que NO son administradores pueden reservar/comprar
-    return !isAdminUser();
+    return !isAdminUser() && !isRootUser();
   };
 
   const isAdminUser = () => {
-    // Solo estos roles específicos son considerados administradores
     const adminRoles = ["Administrador", "administrador", "admin", "root"];
     return adminRoles.includes(userRole);
   };
 
+  const isRootUser = () => {
+    return userRole === "root";
+  };
+
   const isClientUser = () => {
-    // Usuarios que son clientes regulares
     const clientRoles = ["Usuario", "Cliente", "usuario", "cliente"];
     return clientRoles.includes(userRole) || !userRole;
   };
@@ -105,7 +107,11 @@ const ReserveFlight = () => {
             <span className="user-welcome">Hola, {userInfo.nombre}</span>
             <span
               className={`user-role ${
-                isAdminUser() ? "admin-role" : "client-role"
+                isAdminUser()
+                  ? "admin-role"
+                  : isRootUser()
+                  ? "root-role"
+                  : "client-role"
               }`}
             >
               {userInfo.role}
@@ -121,9 +127,14 @@ const ReserveFlight = () => {
               <div className="user-menu-email">{userInfo.correo}</div>
               <div
                 className={`user-role-badge ${
-                  isAdminUser() ? "admin-badge" : "client-badge"
+                  isAdminUser()
+                    ? "admin-badge"
+                    : isRootUser()
+                    ? "root-badge"
+                    : "client-badge"
                 }`}
               >
+                {" "}
                 {userInfo.role}
               </div>
             </div>
@@ -134,11 +145,11 @@ const ReserveFlight = () => {
                 className="menu-item"
                 onClick={() => {
                   setShowMenu(false);
-                  navigate("/manage-flights"); // Cambiar esta línea
+                  navigate("/edit-profile");
                 }}
               >
-                <span className="menu-icon">✈️</span>
-                Gestionar Vuelos
+                <span className="menu-icon">👤</span>
+                Editar Perfil
               </button>
 
               <button
@@ -152,11 +163,20 @@ const ReserveFlight = () => {
                 Cambiar Contraseña
               </button>
 
-              {/* Solo mostrar opciones de administración para administradores */}
-              {isAdminUser() && (
+              {isAdminUser() && !isRootUser() && (
                 <>
                   <div className="menu-divider"></div>
                   <div className="menu-section-title">Administración</div>
+                  <button
+                    className="menu-item"
+                    onClick={() => {
+                      setShowMenu(false);
+                      navigate("/manage-flights");
+                    }}
+                  >
+                    <span className="menu-icon">✈️</span>
+                    Gestionar Vuelos
+                  </button>
                   <button
                     className="menu-item"
                     onClick={() => {
@@ -167,15 +187,25 @@ const ReserveFlight = () => {
                     <span className="menu-icon">👥</span>
                     Gestionar Usuarios
                   </button>
+                </>
+              )}
+
+              {/* Opción de Carrito para Clientes */}
+              {isClientUser() && (
+                <>
+                  <div className="menu-divider"></div>
                   <button
                     className="menu-item"
                     onClick={() => {
                       setShowMenu(false);
-                      alert("Panel de administración próximamente disponible");
+                      navigate("/cart");
                     }}
                   >
-                    <span className="menu-icon">📊</span>
-                    Panel de Control
+                    <span className="menu-icon">🛒</span>
+                    Carrito de Compras
+                    {getCartItemCount() > 0 && (
+                      <span className="cart-badge">{getCartItemCount()}</span>
+                    )}
                   </button>
                 </>
               )}
@@ -199,6 +229,12 @@ const ReserveFlight = () => {
     );
   };
 
+  // Función para contar items del carrito
+  const getCartItemCount = () => {
+    const cart = JSON.parse(localStorage.getItem("vivasky_cart") || "[]");
+    return cart.length;
+  };
+
   const handleLogoClick = () => {
     navigate("/");
   };
@@ -207,25 +243,81 @@ const ReserveFlight = () => {
     navigate("/search-flights", { state: location.state?.searchParams });
   };
 
+  // Función para agregar al carrito
+  const addToCart = () => {
+    const cartItem = {
+      ...flightData,
+      searchParams: location.state?.searchParams,
+      selectedClass: selectedClass,
+      addedAt: new Date().toISOString(),
+      totalPrice: calculateTotalPrice(),
+    };
+
+    // Obtener carrito existente
+    const existingCart = JSON.parse(
+      localStorage.getItem("vivasky_cart") || "[]"
+    );
+
+    // Verificar si ya existe este vuelo en el carrito
+    const existingIndex = existingCart.findIndex(
+      (item) =>
+        item.id === flightData.id && item.selectedClass === selectedClass
+    );
+
+    if (existingIndex === -1) {
+      // Agregar nuevo item
+      existingCart.push(cartItem);
+      localStorage.setItem("vivasky_cart", JSON.stringify(existingCart));
+
+      // Mostrar confirmación
+      alert("✅ Vuelo agregado al carrito exitosamente");
+    } else {
+      alert("⚠️ Este vuelo ya está en tu carrito");
+    }
+
+    setShowPurchaseModal(false);
+    navigate("/search-flights");
+  };
+
+  // Nueva función para manejar la compra con modal
+  const handleBuyFlightWithModal = () => {
+    if (!canMakeReservations()) {
+      showAdminRestrictionMessage();
+      return;
+    }
+
+    if (!selectedClass && isClientUser()) {
+      alert("Por favor selecciona una clase de vuelo antes de continuar.");
+      return;
+    }
+
+    setShowPurchaseModal(true);
+  };
+
   const handleReserveFlight = () => {
     if (!canMakeReservations()) {
       showAdminRestrictionMessage();
       return;
     }
 
-    const totalPrice =
-      location.state?.searchParams?.tripType === "roundtrip"
-        ? flightData.priceNumber * 2 * 1.15
-        : flightData.priceNumber * 1.15;
+    if (!selectedClass && isClientUser()) {
+      alert("Por favor selecciona una clase de vuelo antes de continuar.");
+      return;
+    }
 
+    const totalPrice = calculateTotalPrice();
     const formattedTotal = new Intl.NumberFormat("es-CO", {
       style: "currency",
       currency: "COP",
       minimumFractionDigits: 0,
     }).format(totalPrice);
 
+    const classMessage = selectedClass
+      ? `\n🎫 Clase: ${selectedClass === "economy" ? "Económica" : "VIP"}`
+      : "";
+
     alert(
-      `¡Vuelo ${flightData.flightNumber} reservado exitosamente!\n\n📧 Te hemos enviado un correo de confirmación a ${userInfo.correo}\n💰 Total reservado: ${formattedTotal}\n⏰ Tienes 24 horas para completar el pago`
+      `¡Vuelo ${flightData.flightNumber} reservado exitosamente!${classMessage}\n\n📧 Te hemos enviado un correo de confirmación a ${userInfo.correo}\n💰 Total reservado: ${formattedTotal}\n⏰ Tienes 24 horas para completar el pago`
     );
   };
 
@@ -235,20 +327,27 @@ const ReserveFlight = () => {
       return;
     }
 
-    const totalPrice =
-      location.state?.searchParams?.tripType === "roundtrip"
-        ? flightData.priceNumber * 2 * 1.15
-        : flightData.priceNumber * 1.15;
+    if (!selectedClass && isClientUser()) {
+      alert("Por favor selecciona una clase de vuelo antes de continuar.");
+      return;
+    }
 
+    const totalPrice = calculateTotalPrice();
     const formattedTotal = new Intl.NumberFormat("es-CO", {
       style: "currency",
       currency: "COP",
       minimumFractionDigits: 0,
     }).format(totalPrice);
 
+    const classMessage = selectedClass
+      ? `\n🎫 Clase: ${selectedClass === "economy" ? "Económica" : "VIP"}`
+      : "";
+
     alert(
-      `¡Compra del vuelo ${flightData.flightNumber} realizada exitosamente!\n\n🎫 Recibirás tu boleto electrónico en ${userInfo.correo}\n💰 Total pagado: ${formattedTotal}\n✈️ ¡Buen viaje con VivaSky!`
+      `¡Compra del vuelo ${flightData.flightNumber} realizada exitosamente!${classMessage}\n\n🎫 Recibirás tu boleto electrónico en ${userInfo.correo}\n💰 Total pagado: ${formattedTotal}\n✈️ ¡Buen viaje con VivaSky!`
     );
+
+    setShowPurchaseModal(false);
   };
 
   const showAdminRestrictionMessage = () => {
@@ -257,19 +356,101 @@ const ReserveFlight = () => {
     );
   };
 
-  // Calcular precio total
+  // Calcular precio total con clase seleccionada
   const calculateTotalPrice = () => {
-    const basePrice =
+    let basePrice =
       location.state?.searchParams?.tripType === "roundtrip"
         ? flightData.priceNumber * 2
         : flightData.priceNumber;
 
+    // Aplicar recargo por clase VIP (30% más)
+    if (selectedClass === "vip") {
+      basePrice = basePrice * 1.3;
+    }
+
     const taxes = basePrice * 0.15;
-    return {
-      base: basePrice,
-      taxes: taxes,
-      total: basePrice + taxes,
-    };
+    return basePrice + taxes;
+  };
+
+  // Obtener el precio base según la clase seleccionada
+  const getBasePrice = () => {
+    let basePrice =
+      location.state?.searchParams?.tripType === "roundtrip"
+        ? flightData.priceNumber * 2
+        : flightData.priceNumber;
+
+    if (selectedClass === "vip") {
+      basePrice = basePrice * 1.3;
+    }
+
+    return basePrice;
+  };
+
+  // Componente para selección de clase (solo para clientes)
+  const ClassSelector = () => {
+    if (!isClientUser()) return null;
+
+    return (
+      <div className="class-selection-section">
+        <h4>🎫 Selecciona tu Clase de Vuelo</h4>
+        <div className="class-options">
+          <div
+            className={`class-option ${
+              selectedClass === "economy" ? "selected" : ""
+            }`}
+            onClick={() => setSelectedClass("economy")}
+          >
+            <div className="class-icon">💺</div>
+            <div className="class-info">
+              <div className="class-name">Clase Económica</div>
+              <div className="class-price">
+                +{" "}
+                {new Intl.NumberFormat("es-CO", {
+                  style: "currency",
+                  currency: "COP",
+                  minimumFractionDigits: 0,
+                }).format(0)}
+              </div>
+              <div className="class-features">
+                <span>• Asiento estándar</span>
+                <span>• Servicio básico</span>
+              </div>
+            </div>
+          </div>
+
+          <div
+            className={`class-option ${
+              selectedClass === "vip" ? "selected" : ""
+            }`}
+            onClick={() => setSelectedClass("vip")}
+          >
+            <div className="class-icon">⭐</div>
+            <div className="class-info">
+              <div className="class-name">Clase VIP</div>
+              <div className="class-price">
+                +{" "}
+                {new Intl.NumberFormat("es-CO", {
+                  style: "currency",
+                  currency: "COP",
+                  minimumFractionDigits: 0,
+                }).format(flightData.priceNumber * 0.3)}
+              </div>
+              <div className="class-features">
+                <span>• Asientos premium</span>
+                <span>• Servicio prioritario</span>
+                <span>• Espacio extra para piernas</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {!selectedClass && (
+          <div className="class-selection-warning">
+            ⚠️ Por favor selecciona una clase para continuar
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Si está cargando
@@ -344,7 +525,6 @@ const ReserveFlight = () => {
               Para reservar este vuelo necesitas tener una cuenta en VivaSky
             </p>
 
-            {/* Previsualización del vuelo seleccionado */}
             {location.state?.flight && (
               <div className="flight-preview">
                 <div className="flight-preview-header">
@@ -470,7 +650,9 @@ const ReserveFlight = () => {
     );
   }
 
-  const priceSummary = calculateTotalPrice();
+  const basePrice = getBasePrice();
+  const taxes = basePrice * 0.15;
+  const totalPrice = basePrice + taxes;
 
   // Página principal de reserva (usuario autenticado con datos del vuelo)
   return (
@@ -515,15 +697,16 @@ const ReserveFlight = () => {
       {/* Contenido principal */}
       <div className="reservation-container-enhanced">
         {/* Admin Warning Banner - SOLO para administradores */}
-        {isAdminUser() && (
+        {(isAdminUser() || isRootUser()) && (
           <div className="admin-warning-banner">
             <div className="warning-icon">⚙️</div>
             <div className="warning-content">
-              <h3>Modo Administración</h3>
+              <h3>Modo {isRootUser() ? "Root" : "Administración"}</h3>
               <p>
-                Estás viendo esta página en modo de administración. Los usuarios
-                con rol de <strong>{userRole}</strong> no pueden realizar
-                reservas ni compras de vuelos.
+                Estás viendo esta página en modo de{" "}
+                {isRootUser() ? "root" : "administración"}. Los usuarios con rol
+                de <strong>{userRole}</strong> no pueden realizar reservas ni
+                compras de vuelos.
               </p>
             </div>
           </div>
@@ -672,7 +855,7 @@ const ReserveFlight = () => {
                     <div className="flight-features">
                       <div className="feature-item">
                         <span className="feature-icon">🎒</span>
-                        <span>Equipaje: 23 kg </span>
+                        <span>Equipaje: 23Kg </span>
                       </div>
                       <div className="feature-item">
                         <span className="feature-icon">⏱️</span>
@@ -680,9 +863,12 @@ const ReserveFlight = () => {
                       </div>
                       <div className="feature-item">
                         <span className="feature-icon">🛬</span>
-                        <span>Vuelo: {flightData.stops}</span>
+                        <span> Vuelo: {flightData.stops}</span>
                       </div>
                     </div>
+
+                    {/* Selector de clase - SOLO para clientes */}
+                    <ClassSelector />
                   </div>
 
                   {/* Vuelo de retorno */}
@@ -815,6 +1001,21 @@ const ReserveFlight = () => {
                       </div>
                     </div>
 
+                    {/* Mostrar clase seleccionada si es cliente */}
+                    {isClientUser() && selectedClass && (
+                      <div className="selected-class-info">
+                        <div className="selected-class-icon">
+                          {selectedClass === "economy" ? "💺" : "⭐"}
+                        </div>
+                        <div className="selected-class-details">
+                          <strong>Clase Seleccionada:</strong>
+                          <span>
+                            {selectedClass === "economy" ? "Económica" : "VIP"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Mensaje para administradores - SOLO para administradores */}
                     {isAdminUser() && (
                       <div className="admin-info-message">
@@ -846,9 +1047,24 @@ const ReserveFlight = () => {
                             style: "currency",
                             currency: "COP",
                             minimumFractionDigits: 0,
-                          }).format(priceSummary.base)}
+                          }).format(basePrice)}
                         </span>
                       </div>
+
+                      {/* Mostrar recargo por clase VIP */}
+                      {isClientUser() && selectedClass === "vip" && (
+                        <div className="price-row">
+                          <span>Recargo Clase VIP (30%)</span>
+                          <span className="vip-surcharge">
+                            +{" "}
+                            {new Intl.NumberFormat("es-CO", {
+                              style: "currency",
+                              currency: "COP",
+                              minimumFractionDigits: 0,
+                            }).format(flightData.priceNumber * 0.3)}
+                          </span>
+                        </div>
+                      )}
 
                       <div className="price-row">
                         <span>Impuestos y tasas (15%)</span>
@@ -857,7 +1073,7 @@ const ReserveFlight = () => {
                             style: "currency",
                             currency: "COP",
                             minimumFractionDigits: 0,
-                          }).format(priceSummary.taxes)}
+                          }).format(taxes)}
                         </span>
                       </div>
 
@@ -870,10 +1086,23 @@ const ReserveFlight = () => {
                             style: "currency",
                             currency: "COP",
                             minimumFractionDigits: 0,
-                          }).format(priceSummary.total)}
+                          }).format(totalPrice)}
                         </span>
                       </div>
                     </div>
+
+                    {/* Mostrar clase seleccionada en el resumen */}
+                    {isClientUser() && selectedClass && (
+                      <div className="selected-class-summary">
+                        <div className="class-summary-icon">
+                          {selectedClass === "economy" ? "💺" : "⭐"}
+                        </div>
+                        <div className="class-summary-text">
+                          <strong>Clase:</strong>{" "}
+                          {selectedClass === "economy" ? "Económica" : "VIP"}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="payment-features">
                       <div className="payment-feature">
@@ -927,6 +1156,25 @@ const ReserveFlight = () => {
                 </div>
               </div>
 
+              {/* Mostrar clase seleccionada en el sidebar */}
+              {isClientUser() && selectedClass && (
+                <div className="class-sidebar-info">
+                  <div className="class-sidebar-icon">
+                    {selectedClass === "economy" ? "💺" : "⭐"}
+                  </div>
+                  <div className="class-sidebar-details">
+                    <div className="class-sidebar-name">
+                      {selectedClass === "economy"
+                        ? "Clase Económica"
+                        : "Clase VIP"}
+                    </div>
+                    {selectedClass === "vip" && (
+                      <div className="vip-benefits">+30% comodidad premium</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="price-summary-sidebar">
                 <div className="price-item-sidebar">
                   <span>Subtotal:</span>
@@ -935,9 +1183,25 @@ const ReserveFlight = () => {
                       style: "currency",
                       currency: "COP",
                       minimumFractionDigits: 0,
-                    }).format(priceSummary.base)}
+                    }).format(basePrice)}
                   </span>
                 </div>
+
+                {/* Mostrar recargo VIP en sidebar */}
+                {isClientUser() && selectedClass === "vip" && (
+                  <div className="price-item-sidebar vip-surcharge-sidebar">
+                    <span>Recargo VIP:</span>
+                    <span>
+                      +{" "}
+                      {new Intl.NumberFormat("es-CO", {
+                        style: "currency",
+                        currency: "COP",
+                        minimumFractionDigits: 0,
+                      }).format(flightData.priceNumber * 0.3)}
+                    </span>
+                  </div>
+                )}
+
                 <div className="price-item-sidebar">
                   <span>Impuestos:</span>
                   <span>
@@ -945,7 +1209,7 @@ const ReserveFlight = () => {
                       style: "currency",
                       currency: "COP",
                       minimumFractionDigits: 0,
-                    }).format(priceSummary.taxes)}
+                    }).format(taxes)}
                   </span>
                 </div>
                 <div className="price-total-sidebar">
@@ -955,7 +1219,7 @@ const ReserveFlight = () => {
                       style: "currency",
                       currency: "COP",
                       minimumFractionDigits: 0,
-                    }).format(priceSummary.total)}
+                    }).format(totalPrice)}
                   </span>
                 </div>
               </div>
@@ -966,6 +1230,7 @@ const ReserveFlight = () => {
                     <button
                       className="action-btn reserve-btn-sidebar"
                       onClick={handleReserveFlight}
+                      disabled={isClientUser() && !selectedClass}
                     >
                       <span className="btn-icon">📅</span>
                       Reservar Vuelo
@@ -974,7 +1239,8 @@ const ReserveFlight = () => {
 
                     <button
                       className="action-btn buy-btn-sidebar"
-                      onClick={handleBuyFlight}
+                      onClick={handleBuyFlightWithModal} /* Cambiado aquí */
+                      disabled={isClientUser() && !selectedClass}
                     >
                       <span className="btn-icon">🎫</span>
                       Comprar Ahora
@@ -982,6 +1248,12 @@ const ReserveFlight = () => {
                         Confirmación inmediata
                       </span>
                     </button>
+
+                    {isClientUser() && !selectedClass && (
+                      <div className="class-required-warning">
+                        ⚠️ Selecciona una clase para continuar
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="admin-restriction-sidebar">
@@ -996,10 +1268,109 @@ const ReserveFlight = () => {
                   </div>
                 )}
               </div>
+
+              <div className="sidebar-benefits">
+                <h4>Tu reserva incluye:</h4>
+                <ul>
+                  <li>
+                    ✅ Asiento{" "}
+                    {selectedClass === "vip" ? "premium" : "estándar"}
+                  </li>
+                  <li>✅ Asistencia en aeropuerto</li>
+                  {selectedClass === "vip" && (
+                    <>
+                      <li>✅ Acceso a sala VIP</li>
+                    </>
+                  )}
+                </ul>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modal de Confirmación de Compra */}
+      {showPurchaseModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowPurchaseModal(false)}
+        >
+          <div className="purchase-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="modal-close"
+              onClick={() => setShowPurchaseModal(false)}
+            >
+              ×
+            </button>
+
+            <div className="modal-header">
+              <h2>🎫 Confirmar Compra</h2>
+              <p>¿Qué deseas hacer con este vuelo?</p>
+            </div>
+
+            <div className="modal-content">
+              <div className="flight-summary-modal">
+                <div className="route-summary">
+                  <span className="city-from">{flightData.departure.city}</span>
+                  <span className="arrow">→</span>
+                  <span className="city-to">{flightData.arrival.city}</span>
+                </div>
+                <div className="flight-details">
+                  <span>
+                    {flightData.airline} • {flightData.flightNumber}
+                  </span>
+                  <span className="flight-price">{flightData.price}</span>
+                </div>
+                {selectedClass && (
+                  <div className="class-info">
+                    Clase: {selectedClass === "economy" ? "Económica" : "VIP"}
+                  </div>
+                )}
+                <div className="total-price-modal">
+                  Total:{" "}
+                  {new Intl.NumberFormat("es-CO", {
+                    style: "currency",
+                    currency: "COP",
+                    minimumFractionDigits: 0,
+                  }).format(totalPrice)}
+                </div>
+              </div>
+
+              <div className="purchase-options">
+                <button
+                  className="option-btn primary"
+                  onClick={handleBuyFlight}
+                >
+                  <span className="btn-icon">🎫</span>
+                  <div className="btn-content">
+                    <strong>Comprar Ahora</strong>
+                    <small>Proceder directamente al pago</small>
+                  </div>
+                </button>
+
+                <button className="option-btn secondary" onClick={addToCart}>
+                  <span className="btn-icon">🛒</span>
+                  <div className="btn-content">
+                    <strong>Agregar al Carrito</strong>
+                    <small>Guardar para comprar después</small>
+                  </div>
+                </button>
+
+                <button
+                  className="option-btn light"
+                  onClick={() => setShowPurchaseModal(false)}
+                >
+                  <span className="btn-icon">🔍</span>
+                  <div className="btn-content">
+                    <strong>Seguir Mirando</strong>
+                    <small>Continuar explorando vuelos</small>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
