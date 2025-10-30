@@ -392,8 +392,8 @@ const Register = () => {
                     >
                       <option value="">Selecciona un país</option>
                       {countries.map((pais) => (
-                        <option key={pais.idpais} value={pais.idpais}>
-                          {pais.nombre}
+                        <option key={pais.id} value={pais.id}>
+                          {pais.name}
                         </option>
                       ))}
                     </select>
@@ -416,10 +416,10 @@ const Register = () => {
                       <option value="">Selecciona un departamento</option>
                       {availableDepartments.map((dept) => (
                         <option
-                          key={dept.iddepartamento}
-                          value={dept.iddepartamento}
+                          key={dept.id}
+                          value={dept.id}
                         >
-                          {dept.nombre}
+                          {dept.name}
                         </option>
                       ))}
                     </select>
@@ -437,8 +437,8 @@ const Register = () => {
                     >
                       <option value="">Selecciona una ciudad</option>
                       {availableCities.map((city) => (
-                        <option key={city.idciudad} value={city.idciudad}>
-                          {city.nombre}
+                        <option key={city.id} value={city.id}>
+                          {city.name}
                         </option>
                       ))}
                     </select>
