@@ -20,6 +20,7 @@ import CompleteAdminInfo from "./CompleteAdminInfo";
 import SearchFlights from "./SearchFlights";
 import ReserveFlight from "./ReserveFlight";
 import ManageFlights from "./ManageFlights";
+import Cart from "./Cart";
 
 const App = () => {
   return (
@@ -36,6 +37,7 @@ const App = () => {
         <Route path="/search-flights" element={<SearchFlights />} />
         <Route path="/reserve-flight" element={<ReserveFlight />} />
         <Route path="/manage-flights" element={<ManageFlights />} />
+        <Route path="/cart" element={<Cart />} />
       </Routes>
     </Router>
   );
