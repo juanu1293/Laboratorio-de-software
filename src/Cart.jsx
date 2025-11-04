@@ -169,6 +169,11 @@ const Cart = () => {
   };
 
   const proceedToCheckout = (flight) => {
+    const checkoutFlight = {
+      ...flight,
+      priceNumber: Number(flight.priceNumber) || 0,
+      costo_vip: Number(flight.costo_vip) || 0,
+    };
     navigate("/reserve-flight", {
       state: {
         flight: flight,
@@ -179,11 +184,40 @@ const Cart = () => {
   };
 
   const calculateTotal = () => {
-    return cartItems.reduce((total, item) => total + item.priceNumber, 0);
+    return cartItems.reduce((total, item) => {
+      const price = Number(item.priceNumber) || 0;
+      return total + price;
+    }, 0);
   };
 
   const getTotalItems = () => {
     return cartItems.length;
+  };
+
+  // 🔥 FUNCIÓN CORREGIDA: Formatear duración de manera segura
+  const formatDuration = (duration) => {
+    if (!duration) return "2h 00m";
+
+    // Si es un objeto, convertirlo a string
+    if (typeof duration === "object") {
+      const hours = duration.hours || 0;
+      const minutes = duration.minutes || 0;
+      return `${hours}h ${minutes.toString().padStart(2, "0")}m`;
+    }
+
+    // Si ya es string, devolverlo tal cual
+    if (typeof duration === "string") {
+      return duration;
+    }
+
+    // Si es número, convertirlo
+    if (typeof duration === "number") {
+      const hours = Math.floor(duration / 60);
+      const minutes = duration % 60;
+      return `${hours}h ${minutes.toString().padStart(2, "0")}m`;
+    }
+
+    return "2h 00m";
   };
 
   const today = formatDateForInput(getLocalDate(new Date()));
@@ -264,41 +298,64 @@ const Cart = () => {
                     <div className="flight-airline">
                       <span className="airline-logo">✈️</span>
                       <div>
-                        <h3>{item.airline}</h3>
+                        <h3>{item.airline || "VivaSky Airlines"}</h3>
                         <span className="flight-number">
-                          {item.flightNumber}
+                          {item.flightNumber || "N/A"}
                         </span>
                       </div>
                     </div>
-                    <div className="cart-item-price">{item.price}</div>
+                    <div className="cart-item-price">
+                      {new Intl.NumberFormat("es-CO", {
+                        style: "currency",
+                        currency: "COP",
+                        minimumFractionDigits: 0,
+                      }).format(Number(item.priceNumber) || 0)}
+                    </div>
                   </div>
 
                   <div className="cart-item-route">
                     <div className="route-segment">
-                      <div className="route-time">{item.departure.time}</div>
-                      <div className="route-city">{item.departure.city}</div>
-                      <div className="route-airport">
-                        {item.departure.airport}
+                      <div className="route-time">
+                        {item.departure?.time || "00:00"}
                       </div>
-                      <div className="route-date">{item.departure.date}</div>
+                      <div className="route-city">
+                        {item.departure?.city || "N/A"}
+                      </div>
+                      <div className="route-airport">
+                        {item.departure?.airport || "N/A"}
+                      </div>
+                      <div className="route-date">
+                        {item.departure?.date || "Fecha no disponible"}
+                      </div>
                     </div>
 
                     <div className="route-middle">
-                      <div className="route-duration">{item.duration}</div>
+                      {/* 🔥 CORREGIDO: Usar la función formatDuration */}
+                      <div className="route-duration">
+                        {formatDuration(item.duration)}
+                      </div>
                       <div className="route-line">
                         <div className="line"></div>
                         <div className="plane-icon">✈️</div>
                       </div>
-                      <div className="route-stops">{item.stops}</div>
+                      <div className="route-stops">
+                        {item.stops || "Directo"}
+                      </div>
                     </div>
 
                     <div className="route-segment">
-                      <div className="route-time">{item.arrival.time}</div>
-                      <div className="route-city">{item.arrival.city}</div>
-                      <div className="route-airport">
-                        {item.arrival.airport}
+                      <div className="route-time">
+                        {item.arrival?.time || "00:00"}
                       </div>
-                      <div className="route-date">{item.arrival.date}</div>
+                      <div className="route-city">
+                        {item.arrival?.city || "N/A"}
+                      </div>
+                      <div className="route-airport">
+                        {item.arrival?.airport || "N/A"}
+                      </div>
+                      <div className="route-date">
+                        {item.arrival?.date || "Fecha no disponible"}
+                      </div>
                     </div>
                   </div>
 
@@ -352,7 +409,6 @@ const Cart = () => {
                   </span>
                 </div>
               </div>
-
               <div className="cart-notes">
                 <p>
                   💡 <strong>Nota:</strong> Los precios pueden variar al
