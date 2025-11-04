@@ -20,12 +20,6 @@ const UserMenu = ({ userInfo, onLogout }) => {
     };
   }, []);
 
-  // Función para contar items del carrito
-  const getCartItemCount = () => {
-    const cart = JSON.parse(localStorage.getItem("vivasky_cart") || "[]");
-    return cart.length;
-  };
-
   const toggleMenu = () => {
     setIsOpen(!isOpen);
   };
@@ -33,7 +27,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
   const handleMenuItemClick = (action) => {
     setIsOpen(false);
 
-    // Acciones para cada item del menú
+    // Acciones para cada item del menú - ACTUALIZADO
     const actions = {
       // Root
       "create-admin": () => navigate("/create-admin"),
@@ -53,9 +47,6 @@ const UserMenu = ({ userInfo, onLogout }) => {
       // Usuario
       "check-in": () => navigate("/check-in"),
       "balance-payments": () => navigate("/balance-payments"),
-
-      // Carrito (nuevo)
-      cart: () => navigate("/cart"),
     };
 
     if (actions[action]) {
@@ -63,7 +54,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
     }
   };
 
-  // Definir items del menú según el rol
+  // Definir items del menú según el rol - ACTUALIZADO para incluir todas las opciones del admin
   const getMenuItems = () => {
     const commonItems = [
       { id: "messaging", label: "Mensajería", icon: "💬" },
@@ -95,15 +86,6 @@ const UserMenu = ({ userInfo, onLogout }) => {
 
     const specificItems = roleSpecificItems[userInfo.role] || [];
 
-    // Agregar opción de carrito SOLO para clientes
-    if (userInfo.role === "cliente") {
-      specificItems.push({
-        id: "cart",
-        label: "Carrito de Compras",
-        icon: "🛒",
-      });
-    }
-
     // Solo agregar divider si hay items específicos Y comunes
     if (specificItems.length > 0 && commonItems.length > 0) {
       return [
@@ -128,17 +110,12 @@ const UserMenu = ({ userInfo, onLogout }) => {
   };
 
   const menuItems = getMenuItems();
-  const cartItemCount = getCartItemCount();
 
   return (
     <div className="user-menu-container" ref={menuRef}>
       <button className="user-menu-trigger" onClick={toggleMenu}>
         <span className="user-welcome">Hola, {userInfo.nombre}</span>
         <span className="user-role">({userInfo.role})</span>
-        {/* Mostrar badge del carrito si es cliente y tiene items */}
-        {userInfo.role === "cliente" && cartItemCount > 0 && (
-          <span className="cart-badge-header">{cartItemCount}</span>
-        )}
         <span style={{ fontSize: "12px" }}>▼</span>
       </button>
 
@@ -172,10 +149,6 @@ const UserMenu = ({ userInfo, onLogout }) => {
                 >
                   <span className="menu-icon">{item.icon}</span>
                   <span>{item.label}</span>
-                  {/* Mostrar badge solo para el carrito y si hay items */}
-                  {item.id === "cart" && cartItemCount > 0 && (
-                    <span className="cart-badge">{cartItemCount}</span>
-                  )}
                 </button>
               );
             })}
