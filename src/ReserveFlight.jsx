@@ -11,8 +11,122 @@ const ReserveFlight = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("flight");
   const [userRole, setUserRole] = useState("");
-  const [selectedClass, setSelectedClass] = useState(""); // Debe estar vacío
-  const [showPurchaseModal, setShowPurchaseModal] = useState(false); // Nuevo estado para el modal
+  const [selectedClass, setSelectedClass] = useState("economica"); // "economica" o "vip"
+  const [totalPrice, setTotalPrice] = useState(0);
+
+  // Función para formatear la duración de manera segura
+  const formatDuration = (duration) => {
+    if (!duration) return "2h 00m";
+
+    // Si es un objeto, extraer los minutos
+    if (typeof duration === "object" && duration.minutes !== undefined) {
+      const totalMinutes = duration.minutes;
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+
+      if (hours > 0 && minutes > 0) {
+        return `${hours}h ${minutes}m`;
+      } else if (hours > 0) {
+        return `${hours}h`;
+      } else {
+        return `${minutes}m`;
+      }
+    }
+
+    // Si es un string, devolverlo tal cual
+    if (typeof duration === "string") {
+      return duration;
+    }
+
+    // Si es un número, convertirlo
+    if (typeof duration === "number") {
+      const hours = Math.floor(duration / 60);
+      const minutes = duration % 60;
+
+      if (hours > 0 && minutes > 0) {
+        return `${hours}h ${minutes}m`;
+      } else if (hours > 0) {
+        return `${hours}h`;
+      } else {
+        return `${minutes}m`;
+      }
+    }
+
+    return "2h 00m";
+  };
+
+  // ✅ Nueva función para formatear hora correctamente
+  const formatTime = (time) => {
+    if (!time) return "00:00";
+
+    try {
+      // Si viene como objeto con campo date
+      if (typeof time === "object" && time.date) {
+        const date = new Date(time.date);
+        return date.toLocaleTimeString("es-CO", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        });
+      }
+
+      // Si viene como string ISO o con espacio
+      if (typeof time === "string") {
+        const date = new Date(time);
+        if (!isNaN(date)) {
+          return date.toLocaleTimeString("es-CO", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          });
+        }
+        // Si no es una fecha ISO, cortar parte de hora
+        return time.includes("T")
+          ? time.split("T")[1].substring(0, 5)
+          : time.substring(0, 5);
+      }
+
+      return "00:00";
+    } catch {
+      return "00:00";
+    }
+  };
+
+  // ✅ Nueva versión de formatDate: evita reconvertir fechas ya formateadas
+  const formatDate = (date) => {
+    if (!date) return "Fecha no disponible";
+
+    try {
+      // Si ya viene formateada como texto legible ("1 de noviembre de 2025")
+      if (typeof date === "string" && isNaN(Date.parse(date))) {
+        return date; // ya está lista, la devolvemos tal cual
+      }
+
+      // Si viene como objeto del backend
+      if (typeof date === "object" && date.date) {
+        const d = new Date(date.date);
+        return d.toLocaleDateString("es-CO", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      }
+
+      // Si viene como string ISO (ej: "2025-11-01T05:00:00.000Z")
+      const d = new Date(date);
+      if (!isNaN(d)) {
+        return d.toLocaleDateString("es-CO", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      }
+
+      return "Fecha no disponible";
+    } catch {
+      return "Fecha no disponible";
+    }
+  };
 
   // Verificar autenticación y obtener datos del vuelo
   useEffect(() => {
@@ -23,13 +137,62 @@ const ReserveFlight = () => {
       return;
     }
 
+    // Obtener datos del vuelo desde location.state y formatearlos
     if (location.state && location.state.flight) {
-      setFlightData(location.state.flight);
+      const rawFlightData = location.state.flight;
+
+      // Formatear los datos del vuelo para asegurar que sean strings
+      const formattedFlightData = {
+        ...rawFlightData,
+        duration: formatDuration(rawFlightData.duration),
+        departure: {
+          ...rawFlightData.departure,
+          time: formatTime(rawFlightData.departure?.time),
+          date: formatDate(rawFlightData.departure?.date),
+        },
+        arrival: {
+          ...rawFlightData.arrival,
+          time: formatTime(rawFlightData.arrival?.time),
+          date: formatDate(rawFlightData.arrival?.date),
+        },
+        // 🔄 Asegurar que costo_vip se pase correctamente
+        costo_vip: rawFlightData.costo_vip || rawFlightData.priceNumber || 0,
+        priceNumber: rawFlightData.priceNumber || 0,
+      };
+
+      setFlightData(formattedFlightData);
+
+      // Calcular precio inicial con clase económica
+      calculateTotalPrice(formattedFlightData, "economica");
+
       setLoading(false);
     } else {
       navigate("/");
     }
   }, [location, navigate]);
+
+  // Calcular precio total basado en la clase seleccionada
+  const calculateTotalPrice = (flight, classType) => {
+    if (!flight) return;
+
+    // Obtener el precio base según la clase seleccionada
+    const basePrice =
+      classType === "vip"
+        ? flight.costo_vip || flight.priceNumber || 0
+        : flight.priceNumber || 0;
+
+    const tripMultiplier =
+      location.state?.searchParams?.tripType === "roundtrip" ? 2 : 1;
+    const total = basePrice * tripMultiplier;
+
+    setTotalPrice(total);
+  };
+
+  // Manejar cambio de clase
+  const handleClassChange = (classType) => {
+    setSelectedClass(classType);
+    calculateTotalPrice(flightData, classType);
+  };
 
   const checkAuth = () => {
     const authToken =
@@ -63,19 +226,18 @@ const ReserveFlight = () => {
 
   // Verificar si el usuario puede reservar/comprar
   const canMakeReservations = () => {
-    return !isAdminUser() && !isRootUser();
+    // Solo los usuarios que NO son administradores pueden reservar/comprar
+    return !isAdminUser();
   };
 
   const isAdminUser = () => {
+    // Solo estos roles específicos son considerados administradores
     const adminRoles = ["Administrador", "administrador", "admin", "root"];
     return adminRoles.includes(userRole);
   };
 
-  const isRootUser = () => {
-    return userRole === "root";
-  };
-
   const isClientUser = () => {
+    // Usuarios que son clientes regulares
     const clientRoles = ["Usuario", "Cliente", "usuario", "cliente"];
     return clientRoles.includes(userRole) || !userRole;
   };
@@ -107,11 +269,7 @@ const ReserveFlight = () => {
             <span className="user-welcome">Hola, {userInfo.nombre}</span>
             <span
               className={`user-role ${
-                isAdminUser()
-                  ? "admin-role"
-                  : isRootUser()
-                  ? "root-role"
-                  : "client-role"
+                isAdminUser() ? "admin-role" : "client-role"
               }`}
             >
               {userInfo.role}
@@ -127,14 +285,9 @@ const ReserveFlight = () => {
               <div className="user-menu-email">{userInfo.correo}</div>
               <div
                 className={`user-role-badge ${
-                  isAdminUser()
-                    ? "admin-badge"
-                    : isRootUser()
-                    ? "root-badge"
-                    : "client-badge"
+                  isAdminUser() ? "admin-badge" : "client-badge"
                 }`}
               >
-                {" "}
                 {userInfo.role}
               </div>
             </div>
@@ -145,11 +298,11 @@ const ReserveFlight = () => {
                 className="menu-item"
                 onClick={() => {
                   setShowMenu(false);
-                  navigate("/edit-profile");
+                  navigate("/manage-flights");
                 }}
               >
-                <span className="menu-icon">👤</span>
-                Editar Perfil
+                <span className="menu-icon">✈️</span>
+                Gestionar Vuelos
               </button>
 
               <button
@@ -163,20 +316,11 @@ const ReserveFlight = () => {
                 Cambiar Contraseña
               </button>
 
-              {isAdminUser() && !isRootUser() && (
+              {/* Solo mostrar opciones de administración para administradores */}
+              {isAdminUser() && (
                 <>
                   <div className="menu-divider"></div>
                   <div className="menu-section-title">Administración</div>
-                  <button
-                    className="menu-item"
-                    onClick={() => {
-                      setShowMenu(false);
-                      navigate("/manage-flights");
-                    }}
-                  >
-                    <span className="menu-icon">✈️</span>
-                    Gestionar Vuelos
-                  </button>
                   <button
                     className="menu-item"
                     onClick={() => {
@@ -187,25 +331,15 @@ const ReserveFlight = () => {
                     <span className="menu-icon">👥</span>
                     Gestionar Usuarios
                   </button>
-                </>
-              )}
-
-              {/* Opción de Carrito para Clientes */}
-              {isClientUser() && (
-                <>
-                  <div className="menu-divider"></div>
                   <button
                     className="menu-item"
                     onClick={() => {
                       setShowMenu(false);
-                      navigate("/cart");
+                      alert("Panel de administración próximamente disponible");
                     }}
                   >
-                    <span className="menu-icon">🛒</span>
-                    Carrito de Compras
-                    {getCartItemCount() > 0 && (
-                      <span className="cart-badge">{getCartItemCount()}</span>
-                    )}
+                    <span className="menu-icon">📊</span>
+                    Panel de Control
                   </button>
                 </>
               )}
@@ -229,12 +363,6 @@ const ReserveFlight = () => {
     );
   };
 
-  // Función para contar items del carrito
-  const getCartItemCount = () => {
-    const cart = JSON.parse(localStorage.getItem("vivasky_cart") || "[]");
-    return cart.length;
-  };
-
   const handleLogoClick = () => {
     navigate("/");
   };
@@ -243,81 +371,30 @@ const ReserveFlight = () => {
     navigate("/search-flights", { state: location.state?.searchParams });
   };
 
-  // Función para agregar al carrito
-  const addToCart = () => {
-    const cartItem = {
-      ...flightData,
-      searchParams: location.state?.searchParams,
-      selectedClass: selectedClass,
-      addedAt: new Date().toISOString(),
-      totalPrice: calculateTotalPrice(),
-    };
-
-    // Obtener carrito existente
-    const existingCart = JSON.parse(
-      localStorage.getItem("vivasky_cart") || "[]"
-    );
-
-    // Verificar si ya existe este vuelo en el carrito
-    const existingIndex = existingCart.findIndex(
-      (item) =>
-        item.id === flightData.id && item.selectedClass === selectedClass
-    );
-
-    if (existingIndex === -1) {
-      // Agregar nuevo item
-      existingCart.push(cartItem);
-      localStorage.setItem("vivasky_cart", JSON.stringify(existingCart));
-
-      // Mostrar confirmación
-      alert("✅ Vuelo agregado al carrito exitosamente");
-    } else {
-      alert("⚠️ Este vuelo ya está en tu carrito");
-    }
-
-    setShowPurchaseModal(false);
-    navigate("/search-flights");
-  };
-
-  // Nueva función para manejar la compra con modal
-  const handleBuyFlightWithModal = () => {
-    if (!canMakeReservations()) {
-      showAdminRestrictionMessage();
-      return;
-    }
-
-    if (!selectedClass && isClientUser()) {
-      alert("Por favor selecciona una clase de vuelo antes de continuar.");
-      return;
-    }
-
-    setShowPurchaseModal(true);
-  };
-
   const handleReserveFlight = () => {
     if (!canMakeReservations()) {
       showAdminRestrictionMessage();
       return;
     }
 
-    if (!selectedClass && isClientUser()) {
-      alert("Por favor selecciona una clase de vuelo antes de continuar.");
-      return;
-    }
+    const classText = selectedClass === "vip" ? "VIP" : "Económica";
+    const classPrice =
+      selectedClass === "vip"
+        ? flightData.costo_vip || flightData.priceNumber
+        : flightData.priceNumber;
 
-    const totalPrice = calculateTotalPrice();
     const formattedTotal = new Intl.NumberFormat("es-CO", {
       style: "currency",
       currency: "COP",
       minimumFractionDigits: 0,
     }).format(totalPrice);
 
-    const classMessage = selectedClass
-      ? `\n🎫 Clase: ${selectedClass === "economy" ? "Económica" : "VIP"}`
-      : "";
-
     alert(
-      `¡Vuelo ${flightData.flightNumber} reservado exitosamente!${classMessage}\n\n📧 Te hemos enviado un correo de confirmación a ${userInfo.correo}\n💰 Total reservado: ${formattedTotal}\n⏰ Tienes 24 horas para completar el pago`
+      `¡Vuelo ${flightData.flightNumber} reservado exitosamente!\n\n` +
+        `📧 Te hemos enviado un correo de confirmación a ${userInfo.correo}\n` +
+        `🎫 Clase: ${classText}\n` +
+        `💰 Total reservado: ${formattedTotal}\n` +
+        `⏰ Tienes 24 horas para completar el pago`
     );
   };
 
@@ -327,27 +404,25 @@ const ReserveFlight = () => {
       return;
     }
 
-    if (!selectedClass && isClientUser()) {
-      alert("Por favor selecciona una clase de vuelo antes de continuar.");
-      return;
-    }
+    const classText = selectedClass === "vip" ? "VIP" : "Económica";
+    const classPrice =
+      selectedClass === "vip"
+        ? flightData.costo_vip || flightData.priceNumber
+        : flightData.priceNumber;
 
-    const totalPrice = calculateTotalPrice();
     const formattedTotal = new Intl.NumberFormat("es-CO", {
       style: "currency",
       currency: "COP",
       minimumFractionDigits: 0,
     }).format(totalPrice);
 
-    const classMessage = selectedClass
-      ? `\n🎫 Clase: ${selectedClass === "economy" ? "Económica" : "VIP"}`
-      : "";
-
     alert(
-      `¡Compra del vuelo ${flightData.flightNumber} realizada exitosamente!${classMessage}\n\n🎫 Recibirás tu boleto electrónico en ${userInfo.correo}\n💰 Total pagado: ${formattedTotal}\n✈️ ¡Buen viaje con VivaSky!`
+      `¡Compra del vuelo ${flightData.flightNumber} realizada exitosamente!\n\n` +
+        `🎫 Recibirás tu boleto electrónico en ${userInfo.correo}\n` +
+        `✈️ Clase: ${classText}\n` +
+        `💰 Total pagado: ${formattedTotal}\n` +
+        `¡Buen viaje con VivaSky!`
     );
-
-    setShowPurchaseModal(false);
   };
 
   const showAdminRestrictionMessage = () => {
@@ -356,99 +431,118 @@ const ReserveFlight = () => {
     );
   };
 
-  // Calcular precio total con clase seleccionada
-  const calculateTotalPrice = () => {
-    let basePrice =
-      location.state?.searchParams?.tripType === "roundtrip"
-        ? flightData.priceNumber * 2
-        : flightData.priceNumber;
-
-    // Aplicar recargo por clase VIP (30% más)
-    if (selectedClass === "vip") {
-      basePrice = basePrice * 1.3;
-    }
-
-    const taxes = basePrice * 0.15;
-    return basePrice + taxes;
-  };
-
-  // Obtener el precio base según la clase seleccionada
-  const getBasePrice = () => {
-    let basePrice =
-      location.state?.searchParams?.tripType === "roundtrip"
-        ? flightData.priceNumber * 2
-        : flightData.priceNumber;
-
-    if (selectedClass === "vip") {
-      basePrice = basePrice * 1.3;
-    }
-
-    return basePrice;
-  };
-
-  // Componente para selección de clase (solo para clientes)
+  // Componente para selección de clase
   const ClassSelector = () => {
-    if (!isClientUser()) return null;
+    const economicPrice = flightData.priceNumber || 0;
+    const vipPrice = flightData.costo_vip || flightData.priceNumber || 0;
+    const priceDifference = vipPrice - economicPrice;
 
     return (
-      <div className="class-selection-section">
-        <h4>🎫 Selecciona tu Clase de Vuelo</h4>
+      <div className="class-selector-container">
+        <h3>🎫 Selecciona tu clase</h3>
         <div className="class-options">
           <div
             className={`class-option ${
-              selectedClass === "economy" ? "selected" : ""
+              selectedClass === "economica" ? "selected" : ""
             }`}
-            onClick={() => setSelectedClass("economy")}
+            onClick={() => handleClassChange("economica")}
           >
-            <div className="class-icon">💺</div>
-            <div className="class-info">
-              <div className="class-name">Clase Económica</div>
-              <div className="class-price">
-                +{" "}
+            <div className="class-header">
+              <span className="class-icon">💺</span>
+              <div className="class-info">
+                <h4>Clase Económica</h4>
+                <p>Viaja cómodo con lo esencial</p>
+              </div>
+            </div>
+            <div className="class-features">
+              <div className="feature">
+                <span className="check">✓</span>
+                <span>Asiento estándar</span>
+              </div>
+              <div className="feature">
+                <span className="check">✓</span>
+                <span>Equipaje de mano 8kg</span>
+              </div>
+              <div className="feature">
+                <span className="check">✓</span>
+                <span>Refresco y snack</span>
+              </div>
+            </div>
+            <div className="class-price">
+              <span className="price">
                 {new Intl.NumberFormat("es-CO", {
                   style: "currency",
                   currency: "COP",
                   minimumFractionDigits: 0,
-                }).format(0)}
-              </div>
-              <div className="class-features">
-                <span>• Asiento estándar</span>
-                <span>• Servicio básico</span>
-              </div>
+                }).format(economicPrice)}
+              </span>
+              {selectedClass === "economica" && (
+                <span className="selected-badge">Seleccionada</span>
+              )}
             </div>
           </div>
 
           <div
-            className={`class-option ${
+            className={`class-option vip ${
               selectedClass === "vip" ? "selected" : ""
             }`}
-            onClick={() => setSelectedClass("vip")}
+            onClick={() => handleClassChange("vip")}
           >
-            <div className="class-icon">⭐</div>
-            <div className="class-info">
-              <div className="class-name">Clase VIP</div>
-              <div className="class-price">
-                +{" "}
-                {new Intl.NumberFormat("es-CO", {
-                  style: "currency",
-                  currency: "COP",
-                  minimumFractionDigits: 0,
-                }).format(flightData.priceNumber * 0.3)}
+            <div className="class-header">
+              <span className="class-icon">⭐</span>
+              <div className="class-info">
+                <h4>Clase VIP</h4>
+                <p>Experiencia premium de viaje</p>
               </div>
-              <div className="class-features">
-                <span>• Asientos premium</span>
-                <span>• Servicio prioritario</span>
-                <span>• Espacio extra para piernas</span>
+            </div>
+            <div className="class-features">
+              <div className="feature">
+                <span className="check">✓</span>
+                <span>Asientos premium extra cómodos</span>
               </div>
+              <div className="feature">
+                <span className="check">✓</span>
+                <span>Equipaje 23kg + equipaje de mano</span>
+              </div>
+              <div className="feature">
+                <span className="check">✓</span>
+                <span>Comida gourmet y barra libre</span>
+              </div>
+              <div className="feature">
+                <span className="check">✓</span>
+                <span>Acceso prioritario y sala VIP</span>
+              </div>
+              <div className="feature">
+                <span className="check">✓</span>
+                <span>Atención personalizada</span>
+              </div>
+            </div>
+            <div className="class-price">
+              <div className="price-comparison">
+                <span className="price">
+                  {new Intl.NumberFormat("es-CO", {
+                    style: "currency",
+                    currency: "COP",
+                    minimumFractionDigits: 0,
+                  }).format(vipPrice)}
+                </span>
+                {priceDifference > 0 && (
+                  <span className="price-difference">
+                    +
+                    {new Intl.NumberFormat("es-CO", {
+                      style: "currency",
+                      currency: "COP",
+                      minimumFractionDigits: 0,
+                    }).format(priceDifference)}
+                  </span>
+                )}
+              </div>
+              {selectedClass === "vip" && (
+                <span className="selected-badge">Seleccionada</span>
+              )}
             </div>
           </div>
         </div>
-
-        {!selectedClass && (
-          <div className="class-selection-warning">
-            ⚠️ Por favor selecciona una clase para continuar
-          </div>
-        )}
       </div>
     );
   };
@@ -525,6 +619,7 @@ const ReserveFlight = () => {
               Para reservar este vuelo necesitas tener una cuenta en VivaSky
             </p>
 
+            {/* Previsualización del vuelo seleccionado */}
             {location.state?.flight && (
               <div className="flight-preview">
                 <div className="flight-preview-header">
@@ -650,10 +745,6 @@ const ReserveFlight = () => {
     );
   }
 
-  const basePrice = getBasePrice();
-  const taxes = basePrice * 0.15;
-  const totalPrice = basePrice + taxes;
-
   // Página principal de reserva (usuario autenticado con datos del vuelo)
   return (
     <div className="app">
@@ -697,16 +788,15 @@ const ReserveFlight = () => {
       {/* Contenido principal */}
       <div className="reservation-container-enhanced">
         {/* Admin Warning Banner - SOLO para administradores */}
-        {(isAdminUser() || isRootUser()) && (
+        {isAdminUser() && (
           <div className="admin-warning-banner">
             <div className="warning-icon">⚙️</div>
             <div className="warning-content">
-              <h3>Modo {isRootUser() ? "Root" : "Administración"}</h3>
+              <h3>Modo Administración</h3>
               <p>
-                Estás viendo esta página en modo de{" "}
-                {isRootUser() ? "root" : "administración"}. Los usuarios con rol
-                de <strong>{userRole}</strong> no pueden realizar reservas ni
-                compras de vuelos.
+                Estás viendo esta página en modo de administración. Los usuarios
+                con rol de <strong>{String(userRole)}</strong> no pueden
+                realizar reservas ni compras de vuelos.
               </p>
             </div>
           </div>
@@ -789,65 +879,85 @@ const ReserveFlight = () => {
 
             {/* Contenido de las pestañas */}
             <div className="tab-content">
-              {activeTab === "flight" && (
+              {activeTab === "flight" && flightData && (
                 <div className="flight-details-enhanced">
                   <div className="flight-card-enhanced">
                     <div className="flight-header-enhanced">
                       <div className="airline-info">
                         <span className="airline-logo">✈️</span>
                         <div>
-                          <h3>{flightData.airline}</h3>
+                          <h3>
+                            {String(flightData.airline || "VivaSky Airlines")}
+                          </h3>
                           <p className="flight-number">
-                            {flightData.flightNumber}
+                            {String(flightData.flightNumber || "N/A")}
                           </p>
                         </div>
                       </div>
-                      <div className="flight-price-tag">{flightData.price}</div>
+                      <div className="flight-price-tag">
+                        {selectedClass === "vip"
+                          ? new Intl.NumberFormat("es-CO", {
+                              style: "currency",
+                              currency: "COP",
+                              minimumFractionDigits: 0,
+                            }).format(
+                              flightData.costo_vip || // ← CORREGIDO
+                                flightData.priceNumber ||
+                                0
+                            )
+                          : String(flightData.price || "$0")}
+                      </div>
                     </div>
 
                     <div className="flight-route-enhanced">
                       <div className="route-segment-enhanced">
                         <div className="time-large">
-                          {flightData.departure.time}
+                          {String(flightData.departure?.time || "00:00")}
                         </div>
                         <div className="airport-info">
                           <div className="airport-code-large">
-                            {flightData.departure.airport}
+                            {String(flightData.departure?.airport || "N/A")}
                           </div>
                           <div className="city-name">
-                            {flightData.departure.city}
+                            {String(flightData.departure?.city || "N/A")}
                           </div>
                         </div>
                         <div className="date-info">
-                          {flightData.departure.date}
+                          {String(
+                            flightData.departure?.date || "Fecha no disponible"
+                          )}
                         </div>
                       </div>
 
                       <div className="route-middle-enhanced">
                         <div className="duration-badge">
-                          {flightData.duration}
+                          {String(flightData.duration || "2h 00m")}
                         </div>
                         <div className="route-line">
                           <div className="line"></div>
                           <div className="plane-flying">✈️</div>
                         </div>
-                        <div className="stops-info">{flightData.stops}</div>
+                        <div className="stops-info">
+                          {String(flightData.stops || "Directo")}
+                        </div>
                       </div>
 
                       <div className="route-segment-enhanced">
                         <div className="time-large">
-                          {flightData.arrival.time}
+                          {String(flightData.arrival?.time || "00:00")}
                         </div>
                         <div className="airport-info">
                           <div className="airport-code-large">
-                            {flightData.arrival.airport}
+                            {String(flightData.arrival?.airport || "N/A")}
                           </div>
                           <div className="city-name">
-                            {flightData.arrival.city}
+                            {String(flightData.arrival?.city || "N/A")}
                           </div>
                         </div>
                         <div className="date-info">
-                          {flightData.arrival.date}
+                          {String(
+                            flightData.arrival?.date || "Fecha no disponible"
+                          )}
                         </div>
                       </div>
                     </div>
@@ -855,19 +965,23 @@ const ReserveFlight = () => {
                     <div className="flight-features">
                       <div className="feature-item">
                         <span className="feature-icon">🎒</span>
-                        <span>Equipaje: 23Kg </span>
+                        <span>Equipaje: 23 kg </span>
                       </div>
                       <div className="feature-item">
                         <span className="feature-icon">⏱️</span>
-                        <span>Duración: {flightData.duration}</span>
+                        <span>
+                          Duración: {String(flightData.duration || "2h 00m")}
+                        </span>
                       </div>
                       <div className="feature-item">
                         <span className="feature-icon">🛬</span>
-                        <span> Vuelo: {flightData.stops}</span>
+                        <span>
+                          Vuelo: {String(flightData.stops || "Directo")}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Selector de clase - SOLO para clientes */}
+                    {/* ✅ Selector de Clase */}
                     <ClassSelector />
                   </div>
 
@@ -884,20 +998,23 @@ const ReserveFlight = () => {
                             <div className="time-large">10:15</div>
                             <div className="airport-info">
                               <div className="airport-code-large">
-                                {flightData.arrival.airport}
+                                {String(flightData.arrival?.airport || "N/A")}
                               </div>
                               <div className="city-name">
-                                {flightData.arrival.city}
+                                {String(flightData.arrival?.city || "N/A")}
                               </div>
                             </div>
                             <div className="date-info">
-                              {location.state?.searchParams?.returnDate}
+                              {String(
+                                location.state?.searchParams?.returnDate ||
+                                  "Fecha no disponible"
+                              )}
                             </div>
                           </div>
 
                           <div className="route-middle-enhanced">
                             <div className="duration-badge">
-                              {flightData.duration}
+                              {String(flightData.duration || "2h 00m")}
                             </div>
                             <div className="route-line">
                               <div className="line"></div>
@@ -912,9 +1029,9 @@ const ReserveFlight = () => {
                                 const [hours, minutes] = "10:15"
                                   .split(":")
                                   .map(Number);
-                                const durationMatch = flightData.duration.match(
-                                  /(\d+)h\s*(\d+)m|(\d+)h|(\d+)m/
-                                );
+                                const durationMatch = String(
+                                  flightData.duration || "2h 00m"
+                                ).match(/(\d+)h\s*(\d+)m|(\d+)h|(\d+)m/);
                                 let totalMinutes = hours * 60 + minutes;
 
                                 if (durationMatch) {
@@ -942,14 +1059,17 @@ const ReserveFlight = () => {
                             </div>
                             <div className="airport-info">
                               <div className="airport-code-large">
-                                {flightData.departure.airport}
+                                {String(flightData.departure?.airport || "N/A")}
                               </div>
                               <div className="city-name">
-                                {flightData.departure.city}
+                                {String(flightData.departure?.city || "N/A")}
                               </div>
                             </div>
                             <div className="date-info">
-                              {location.state?.searchParams?.returnDate}
+                              {String(
+                                location.state?.searchParams?.returnDate ||
+                                  "Fecha no disponible"
+                              )}
                             </div>
                           </div>
                         </div>
@@ -959,7 +1079,7 @@ const ReserveFlight = () => {
                 </div>
               )}
 
-              {activeTab === "user" && (
+              {activeTab === "user" && userInfo && (
                 <div className="user-details-enhanced">
                   <div className="user-card">
                     <div className="user-header">
@@ -975,19 +1095,27 @@ const ReserveFlight = () => {
                     <div className="user-info-grid">
                       <div className="info-group">
                         <label>Nombre Completo</label>
-                        <div className="info-value">{userInfo.nombre}</div>
+                        <div className="info-value">
+                          {String(userInfo.nombre)}
+                        </div>
                       </div>
                       <div className="info-group">
                         <label>Correo Electrónico</label>
-                        <div className="info-value">{userInfo.correo}</div>
+                        <div className="info-value">
+                          {String(userInfo.correo)}
+                        </div>
                       </div>
                       <div className="info-group">
                         <label>Teléfono</label>
-                        <div className="info-value">{userInfo.telefono}</div>
+                        <div className="info-value">
+                          {String(userInfo.telefono)}
+                        </div>
                       </div>
                       <div className="info-group">
                         <label>Documento de Identidad</label>
-                        <div className="info-value">{userInfo.documento}</div>
+                        <div className="info-value">
+                          {String(userInfo.documento)}
+                        </div>
                       </div>
                       <div className="info-group">
                         <label>Tipo de Usuario</label>
@@ -996,27 +1124,11 @@ const ReserveFlight = () => {
                             isAdminUser() ? "admin-badge" : "client-badge"
                           }`}
                         >
-                          {userInfo.role}
+                          {String(userInfo.role)}
                         </div>
                       </div>
                     </div>
 
-                    {/* Mostrar clase seleccionada si es cliente */}
-                    {isClientUser() && selectedClass && (
-                      <div className="selected-class-info">
-                        <div className="selected-class-icon">
-                          {selectedClass === "economy" ? "💺" : "⭐"}
-                        </div>
-                        <div className="selected-class-details">
-                          <strong>Clase Seleccionada:</strong>
-                          <span>
-                            {selectedClass === "economy" ? "Económica" : "VIP"}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Mensaje para administradores - SOLO para administradores */}
                     {isAdminUser() && (
                       <div className="admin-info-message">
                         <div className="message-icon">ℹ️</div>
@@ -1034,49 +1146,31 @@ const ReserveFlight = () => {
                 </div>
               )}
 
-              {activeTab === "payment" && (
+              {activeTab === "payment" && flightData && (
                 <div className="payment-details-enhanced">
                   <div className="payment-card">
                     <h3>💳 Resumen de Pago</h3>
 
                     <div className="price-breakdown">
                       <div className="price-row">
-                        <span>Tarifa base</span>
+                        <span>
+                          Tarifa base (
+                          {selectedClass === "vip" ? "VIP" : "Económica"})
+                        </span>
                         <span>
                           {new Intl.NumberFormat("es-CO", {
                             style: "currency",
                             currency: "COP",
                             minimumFractionDigits: 0,
-                          }).format(basePrice)}
+                          }).format(
+                            selectedClass === "vip"
+                              ? flightData.costo_vip || // ← CORREGIDO
+                                  flightData.priceNumber ||
+                                  0
+                              : flightData.priceNumber || 0
+                          )}
                         </span>
                       </div>
-
-                      {/* Mostrar recargo por clase VIP */}
-                      {isClientUser() && selectedClass === "vip" && (
-                        <div className="price-row">
-                          <span>Recargo Clase VIP (30%)</span>
-                          <span className="vip-surcharge">
-                            +{" "}
-                            {new Intl.NumberFormat("es-CO", {
-                              style: "currency",
-                              currency: "COP",
-                              minimumFractionDigits: 0,
-                            }).format(flightData.priceNumber * 0.3)}
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="price-row">
-                        <span>Impuestos y tasas (15%)</span>
-                        <span>
-                          {new Intl.NumberFormat("es-CO", {
-                            style: "currency",
-                            currency: "COP",
-                            minimumFractionDigits: 0,
-                          }).format(taxes)}
-                        </span>
-                      </div>
-
                       <div className="price-divider-enhanced"></div>
 
                       <div className="price-row total">
@@ -1090,19 +1184,6 @@ const ReserveFlight = () => {
                         </span>
                       </div>
                     </div>
-
-                    {/* Mostrar clase seleccionada en el resumen */}
-                    {isClientUser() && selectedClass && (
-                      <div className="selected-class-summary">
-                        <div className="class-summary-icon">
-                          {selectedClass === "economy" ? "💺" : "⭐"}
-                        </div>
-                        <div className="class-summary-text">
-                          <strong>Clase:</strong>{" "}
-                          {selectedClass === "economy" ? "Económica" : "VIP"}
-                        </div>
-                      </div>
-                    )}
 
                     <div className="payment-features">
                       <div className="payment-feature">
@@ -1119,7 +1200,6 @@ const ReserveFlight = () => {
                       </div>
                     </div>
 
-                    {/* Mensaje de restricción para administradores - SOLO para administradores */}
                     {isAdminUser() && (
                       <div className="admin-restriction-message">
                         <div className="restriction-icon">⛔</div>
@@ -1145,71 +1225,53 @@ const ReserveFlight = () => {
 
               <div className="route-summary">
                 <div className="cities">
-                  <span className="city-from">{flightData.departure.city}</span>
+                  <span className="city-from">
+                    {String(flightData?.departure?.city || "N/A")}
+                  </span>
                   <span className="arrow">→</span>
-                  <span className="city-to">{flightData.arrival.city}</span>
+                  <span className="city-to">
+                    {String(flightData?.arrival?.city || "N/A")}
+                  </span>
                 </div>
                 <div className="dates">
-                  {flightData.departure.date}
+                  {String(flightData?.departure?.date || "Fecha no disponible")}
                   {location.state?.searchParams?.tripType === "roundtrip" &&
-                    ` - ${location.state.searchParams.returnDate}`}
+                    ` - ${String(
+                      location.state.searchParams.returnDate ||
+                        "Fecha no disponible"
+                    )}`}
+                </div>
+                <div className="class-selected">
+                  <strong>Clase:</strong>{" "}
+                  {selectedClass === "vip" ? "VIP" : "Económica"}
                 </div>
               </div>
 
-              {/* Mostrar clase seleccionada en el sidebar */}
-              {isClientUser() && selectedClass && (
-                <div className="class-sidebar-info">
-                  <div className="class-sidebar-icon">
-                    {selectedClass === "economy" ? "💺" : "⭐"}
-                  </div>
-                  <div className="class-sidebar-details">
-                    <div className="class-sidebar-name">
-                      {selectedClass === "economy"
-                        ? "Clase Económica"
-                        : "Clase VIP"}
-                    </div>
-                    {selectedClass === "vip" && (
-                      <div className="vip-benefits">+30% comodidad premium</div>
-                    )}
-                  </div>
-                </div>
-              )}
-
               <div className="price-summary-sidebar">
                 <div className="price-item-sidebar">
-                  <span>Subtotal:</span>
                   <span>
-                    {new Intl.NumberFormat("es-CO", {
-                      style: "currency",
-                      currency: "COP",
-                      minimumFractionDigits: 0,
-                    }).format(basePrice)}
+                    Subtotal ({selectedClass === "vip" ? "VIP" : "Económica"}):
                   </span>
-                </div>
-
-                {/* Mostrar recargo VIP en sidebar */}
-                {isClientUser() && selectedClass === "vip" && (
-                  <div className="price-item-sidebar vip-surcharge-sidebar">
-                    <span>Recargo VIP:</span>
-                    <span>
-                      +{" "}
-                      {new Intl.NumberFormat("es-CO", {
-                        style: "currency",
-                        currency: "COP",
-                        minimumFractionDigits: 0,
-                      }).format(flightData.priceNumber * 0.3)}
-                    </span>
-                  </div>
-                )}
-
-                <div className="price-item-sidebar">
-                  <span>Impuestos:</span>
                   <span>
                     {new Intl.NumberFormat("es-CO", {
                       style: "currency",
                       currency: "COP",
                       minimumFractionDigits: 0,
-                    }).format(taxes)}
+                    }).format(
+                      selectedClass === "vip"
+                        ? (flightData.costo_vip || // ← CORREGIDO
+                            flightData.priceNumber ||
+                            0) *
+                            (location.state?.searchParams?.tripType ===
+                            "roundtrip"
+                              ? 2
+                              : 1)
+                        : (flightData.priceNumber || 0) *
+                            (location.state?.searchParams?.tripType ===
+                            "roundtrip"
+                              ? 2
+                              : 1)
+                    )}
                   </span>
                 </div>
                 <div className="price-total-sidebar">
@@ -1230,7 +1292,6 @@ const ReserveFlight = () => {
                     <button
                       className="action-btn reserve-btn-sidebar"
                       onClick={handleReserveFlight}
-                      disabled={isClientUser() && !selectedClass}
                     >
                       <span className="btn-icon">📅</span>
                       Reservar Vuelo
@@ -1239,8 +1300,7 @@ const ReserveFlight = () => {
 
                     <button
                       className="action-btn buy-btn-sidebar"
-                      onClick={handleBuyFlightWithModal} /* Cambiado aquí */
-                      disabled={isClientUser() && !selectedClass}
+                      onClick={handleBuyFlight}
                     >
                       <span className="btn-icon">🎫</span>
                       Comprar Ahora
@@ -1248,12 +1308,6 @@ const ReserveFlight = () => {
                         Confirmación inmediata
                       </span>
                     </button>
-
-                    {isClientUser() && !selectedClass && (
-                      <div className="class-required-warning">
-                        ⚠️ Selecciona una clase para continuar
-                      </div>
-                    )}
                   </>
                 ) : (
                   <div className="admin-restriction-sidebar">
@@ -1268,109 +1322,10 @@ const ReserveFlight = () => {
                   </div>
                 )}
               </div>
-
-              <div className="sidebar-benefits">
-                <h4>Tu reserva incluye:</h4>
-                <ul>
-                  <li>
-                    ✅ Asiento{" "}
-                    {selectedClass === "vip" ? "premium" : "estándar"}
-                  </li>
-                  <li>✅ Asistencia en aeropuerto</li>
-                  {selectedClass === "vip" && (
-                    <>
-                      <li>✅ Acceso a sala VIP</li>
-                    </>
-                  )}
-                </ul>
-              </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Modal de Confirmación de Compra */}
-      {showPurchaseModal && (
-        <div
-          className="modal-overlay"
-          onClick={() => setShowPurchaseModal(false)}
-        >
-          <div className="purchase-modal" onClick={(e) => e.stopPropagation()}>
-            <button
-              className="modal-close"
-              onClick={() => setShowPurchaseModal(false)}
-            >
-              ×
-            </button>
-
-            <div className="modal-header">
-              <h2>🎫 Confirmar Compra</h2>
-              <p>¿Qué deseas hacer con este vuelo?</p>
-            </div>
-
-            <div className="modal-content">
-              <div className="flight-summary-modal">
-                <div className="route-summary">
-                  <span className="city-from">{flightData.departure.city}</span>
-                  <span className="arrow">→</span>
-                  <span className="city-to">{flightData.arrival.city}</span>
-                </div>
-                <div className="flight-details">
-                  <span>
-                    {flightData.airline} • {flightData.flightNumber}
-                  </span>
-                  <span className="flight-price">{flightData.price}</span>
-                </div>
-                {selectedClass && (
-                  <div className="class-info">
-                    Clase: {selectedClass === "economy" ? "Económica" : "VIP"}
-                  </div>
-                )}
-                <div className="total-price-modal">
-                  Total:{" "}
-                  {new Intl.NumberFormat("es-CO", {
-                    style: "currency",
-                    currency: "COP",
-                    minimumFractionDigits: 0,
-                  }).format(totalPrice)}
-                </div>
-              </div>
-
-              <div className="purchase-options">
-                <button
-                  className="option-btn primary"
-                  onClick={handleBuyFlight}
-                >
-                  <span className="btn-icon">🎫</span>
-                  <div className="btn-content">
-                    <strong>Comprar Ahora</strong>
-                    <small>Proceder directamente al pago</small>
-                  </div>
-                </button>
-
-                <button className="option-btn secondary" onClick={addToCart}>
-                  <span className="btn-icon">🛒</span>
-                  <div className="btn-content">
-                    <strong>Agregar al Carrito</strong>
-                    <small>Guardar para comprar después</small>
-                  </div>
-                </button>
-
-                <button
-                  className="option-btn light"
-                  onClick={() => setShowPurchaseModal(false)}
-                >
-                  <span className="btn-icon">🔍</span>
-                  <div className="btn-content">
-                    <strong>Seguir Mirando</strong>
-                    <small>Continuar explorando vuelos</small>
-                  </div>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
