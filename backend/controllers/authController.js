@@ -290,3 +290,4 @@ const getCurrentUser = async (req, res) => {
 };
 
 module.exports = { registerUser, loginUser, updateUserController, forgotPassword, resetPassword, createAdminController, getCurrentUser };
+
