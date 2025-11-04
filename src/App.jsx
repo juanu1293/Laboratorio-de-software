@@ -345,13 +345,16 @@ const HomePage = () => {
     const departureDateSQL = new Date(departureDate)
       .toISOString()
       .split("T")[0];
-    // Navegar a la página de resultados de búsqueda
+
+    // 🔥 IMPORTANTE: Incluir tripType y returnDate en state
     navigate("/search-flights", {
       state: {
         origin,
         destination,
         departureDate,
         departureDateSQL,
+        returnDate: tripType === "roundtrip" ? returnDate : null, // 🔥 NUEVO
+        tripType, // 🔥 NUEVO
       },
     });
   };
