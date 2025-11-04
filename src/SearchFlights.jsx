@@ -1,996 +1,479 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import "./App.css";
 
-const SearchFlights = () => {
-  const navigate = useNavigate();
+function SearchFlights() {
   const location = useLocation();
-  const [sortOption, setSortOption] = useState("recommended");
-  const [userInfo, setUserInfo] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [filteredFlights, setFilteredFlights] = useState([]);
-  const [searchParams, setSearchParams] = useState(
-    location.state || {
-      origin: "Bogotá",
-      destination: "Medellín",
-      departureDate: "Vie, 15 Nov",
-      returnDate: "Vie, 22 Nov",
-      tripType: "roundtrip",
-    }
-  );
+  const navigate = useNavigate();
+  const searchParams = location.state || {};
 
-  // Verificar autenticación al cargar el componente
+  const [flights, setFlights] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [userName, setUserName] = useState("Usuario");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState("");
+
+  // Verificar autenticación
   useEffect(() => {
+    const checkAuth = () => {
+      const authToken =
+        localStorage.getItem("authToken") ||
+        sessionStorage.getItem("authToken");
+      const userData =
+        localStorage.getItem("userData") || sessionStorage.getItem("userData");
+
+      if (authToken && userData) {
+        try {
+          const user = JSON.parse(userData);
+          setUserName(user.nombre || "Usuario");
+          setUserRole(user.tipo_usuario || user.role || "Usuario");
+          setIsAuthenticated(true);
+        } catch (error) {
+          console.error("Error parsing user data:", error);
+        }
+      }
+    };
+
     checkAuth();
   }, []);
 
-  // Aplicar ordenamientos cuando cambien las opciones
-  useEffect(() => {
-    applySorting();
-  }, [sortOption, searchParams]);
-
-  // Efecto para actualizar cuando lleguen nuevos parámetros
-  useEffect(() => {
-    if (location.state && location.state.origin) {
-      setSearchParams(location.state);
-      setFilteredFlights(generateFlightResults(location.state));
-    }
-  }, [location.state]);
-
-  const canMakeReservations = () => {
-    return !isAdminUser() && !isRootUser();
-  };
-
+  // 🔥 NUEVA FUNCIÓN: Verificar si es admin
   const isAdminUser = () => {
-    const adminRoles = ["Administrador", "administrador", "admin"];
-    return adminRoles.includes(userInfo?.role);
+    const adminRoles = ["Administrador", "administrador", "admin", "root"];
+    return adminRoles.includes(userRole);
   };
 
-  const isRootUser = () => {
-    return userInfo?.role === "root";
-  };
-
-  const isClientUser = () => {
-    const clientRoles = ["Usuario", "Cliente", "usuario", "cliente"];
-    return clientRoles.includes(userInfo?.role) || !userInfo?.role;
-  };
-  const checkAuth = () => {
-    const authToken =
-      localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
-    const userData =
-      localStorage.getItem("userData") || sessionStorage.getItem("userData");
-
-    if (authToken && userData) {
-      try {
-        const user = JSON.parse(userData);
-        setUserInfo({
-          nombre: user.nombre,
-          correo: user.correo,
-          role: user.tipo_usuario || user.role || "Usuario",
-        });
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-        handleLogout();
-      }
-    }
-  };
-
+  // Cerrar sesión
   const handleLogout = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("userData");
     sessionStorage.removeItem("authToken");
     sessionStorage.removeItem("userData");
-
-    setUserInfo(null);
-    setIsAuthenticated(false);
-    alert("Has cerrado sesión exitosamente");
     navigate("/");
   };
 
-  // Función para mostrar el menú de usuario
-  const UserMenu = ({ userInfo, onLogout }) => {
-    const [showMenu, setShowMenu] = useState(false);
-    const isClientUser = () => {
-      const clientRoles = ["Usuario", "Cliente", "usuario", "cliente"];
-      return clientRoles.includes(userInfo.role) || !userInfo.role;
-    };
-    const getCartItemCount = () => {
-      const cart = JSON.parse(localStorage.getItem("vivasky_cart") || "[]");
-      return cart.length;
-    };
-    return (
-      <div className="user-menu-container">
-        <button
-          className="user-menu-trigger"
-          onClick={() => setShowMenu(!showMenu)}
-        >
-          <div className="user-info">
-            <span className="user-welcome">Hola, {userInfo.nombre}</span>
-            <span className="user-role">{userInfo.role}</span>
-          </div>
-          <span>▼</span>
-        </button>
+  // Obtener vuelos desde el backend - CON DEBUG
+  const fetchFlights = async () => {
+    const departureDateSQL =
+      searchParams.departureDateSQL ||
+      (searchParams.departureDate
+        ? new Date(searchParams.departureDate).toISOString().split("T")[0]
+        : null);
 
-        {showMenu && (
-          <div className="user-menu-dropdown">
-            <div className="user-menu-header">
-              <div className="user-welcome">{userInfo.nombre}</div>
-              <div className="user-menu-email">{userInfo.correo}</div>
-            </div>
+    if (
+      !searchParams.origin ||
+      !searchParams.destination ||
+      !departureDateSQL
+    ) {
+      setErrorMsg("Faltan parámetros de búsqueda.");
+      return;
+    }
 
-            <div className="user-menu-items">
-              <div className="menu-section-title">Mi Cuenta</div>
-              <button
-                className="menu-item"
-                onClick={() => {
-                  setShowMenu(false);
-                  navigate("/edit-profile");
-                }}
-              >
-                <span className="menu-icon">👤</span>
-                Editar Perfil
-              </button>
+    setLoading(true);
+    setErrorMsg("");
 
-              <button
-                className="menu-item"
-                onClick={() => {
-                  setShowMenu(false);
-                  navigate("/change-password");
-                }}
-              >
-                <span className="menu-icon">🔒</span>
-                Cambiar Contraseña
-              </button>
-              {isClientUser() && (
-                <>
-                  <div className="menu-divider"></div>
-                  <button
-                    className="menu-item"
-                    onClick={() => {
-                      setShowMenu(false);
-                      navigate("/cart");
-                    }}
-                  >
-                    <span className="menu-icon">🛒</span>
-                    Carrito de Compras
-                    {getCartItemCount() > 0 && (
-                      <span className="cart-badge">{getCartItemCount()}</span>
-                    )}
-                  </button>
-                </>
-              )}
-              <div className="menu-divider"></div>
+    try {
+      const url = `http://localhost:5000/api/search-flights?origen=${encodeURIComponent(
+        searchParams.origin
+      )}&destino=${encodeURIComponent(
+        searchParams.destination
+      )}&fecha_salida=${encodeURIComponent(departureDateSQL)}`;
 
-              <div className="menu-section-title">Administración</div>
-              <button
-                className="menu-item"
-                onClick={() => {
-                  setShowMenu(false);
-                  alert("Funcionalidad próximamente disponible");
-                }}
-              >
-                <span className="menu-icon">📊</span>
-                Panel de Control
-              </button>
+      console.log("🔄 Buscando vuelos en:", url);
 
-              <div className="menu-divider"></div>
+      const response = await fetch(url);
+      const data = await response.json();
 
-              <button
-                className="menu-item logout"
-                onClick={() => {
-                  setShowMenu(false);
-                  onLogout();
-                }}
-              >
-                <span className="menu-icon">🚪</span>
-                Cerrar Sesión
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
+      console.log("📦 Respuesta completa del backend:", data);
+
+      if (!response.ok) {
+        const msg =
+          response.status === 404
+            ? "No se encontraron vuelos disponibles."
+            : "Error al obtener los vuelos.";
+        setErrorMsg(msg);
+        setFlights([]);
+        return;
+      }
+
+      if (!Array.isArray(data)) {
+        setErrorMsg("Respuesta inesperada del servidor.");
+        setFlights([]);
+        return;
+      }
+
+      // DEBUG: Ver estructura de los vuelos
+      if (data.length > 0) {
+        console.log("✈️ Primer vuelo de ejemplo:", data[0]);
+        console.log(
+          "⏱️ Duración del primer vuelo:",
+          data[0].duracion,
+          "Tipo:",
+          typeof data[0].duracion
+        );
+      }
+
+      setFlights(data);
+    } catch (error) {
+      console.error("Error al buscar vuelos:", error);
+      setErrorMsg("Error de conexión con el servidor.");
+      setFlights([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleComingSoon = () => {
-    alert("Esta funcionalidad estará activa próximamente");
-  };
+  useEffect(() => {
+    fetchFlights();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Definir ciudades internacionales aquí también
-  const internationalCities = [
-    "Madrid",
-    "Londres",
-    "New York",
-    "Buenos Aires",
-    "Miami",
-  ];
-  const colombianCities = [
-    "Bogotá",
-    "Medellín",
-    "Cali",
-    "Barranquilla",
-    "Cartagena",
-    "Cúcuta",
-    "Bucaramanga",
-    "Pereira",
-    "Santa Marta",
-    "Ibagué",
-    "Pasto",
-    "Manizales",
-    "Neiva",
-    "Villavicencio",
-    "Armenia",
-    "Valledupar",
-    "Montería",
-    "Sincelejo",
-    "Popayán",
-    "Riohacha",
-    "Tunja",
-    "Florencia",
-    "Quibdó",
-    "Arauca",
-    "Yopal",
-    "Mocoa",
-    "San José del Guaviare",
-    "Leticia",
-    "Mitú",
-    "Puerto Carreño",
-    "San Andrés",
-  ];
-
-  // Zonas horarias (diferencia con respecto a Colombia - UTC-5)
-  const timeZones = {
-    // Colombia (UTC-5)
-    Bogotá: 0,
-    Medellín: 0,
-    Cali: 0,
-    Barranquilla: 0,
-    Cartagena: 0,
-    Cúcuta: 0,
-    Bucaramanga: 0,
-    Pereira: 0,
-    "Santa Marta": 0,
-    Ibagué: 0,
-    Pasto: 0,
-    Manizales: 0,
-    Neiva: 0,
-    Villavicencio: 0,
-    Armenia: 0,
-    Valledupar: 0,
-    Montería: 0,
-    Sincelejo: 0,
-    Popayán: 0,
-    Riohacha: 0,
-    Tunja: 0,
-    Florencia: 0,
-    Quibdó: 0,
-    Arauca: 0,
-    Yopal: 0,
-    Mocoa: 0,
-    "San José del Guaviare": 0,
-    Leticia: 0,
-    Mitú: 0,
-    "Puerto Carreño": 0,
-    "San Andrés": 0,
-
-    // Internacionales
-    Madrid: 6, // España (UTC+1) -> +6 horas con Colombia
-    Londres: 5, // Reino Unido (UTC+0) -> +5 horas con Colombia
-    "New York": -1, // USA (UTC-4) -> -1 hora con Colombia
-    "Buenos Aires": 2, // Argentina (UTC-3) -> +2 horas con Colombia
-    Miami: -1, // USA (UTC-4) -> -1 hora con Colombia
-  };
-
-  // Duración de vuelos nacionales (entre ciudades colombianas)
-  const nationalDurations = {
-    // Desde Bogotá
-    "Bogotá-Medellín": "45m",
-    "Bogotá-Cali": "1h 15m",
-    "Bogotá-Barranquilla": "1h 30m",
-    "Bogotá-Cartagena": "1h 25m",
-    "Bogotá-Cúcuta": "1h 10m",
-    "Bogotá-Bucaramanga": "50m",
-    "Bogotá-Pereira": "35m",
-    "Bogotá-Santa Marta": "1h 35m",
-    "Bogotá-Ibagué": "25m",
-    "Bogotá-Pasto": "1h 45m",
-    "Bogotá-Manizales": "40m",
-    "Bogotá-Neiva": "45m",
-    "Bogotá-Villavicencio": "30m",
-    "Bogotá-Armenia": "35m",
-    "Bogotá-Valledupar": "1h 20m",
-    "Bogotá-Montería": "1h 15m",
-    "Bogotá-Sincelejo": "1h 25m",
-    "Bogotá-Popayán": "1h 30m",
-    "Bogotá-Riohacha": "1h 40m",
-    "Bogotá-Tunja": "20m",
-    "Bogotá-Florencia": "1h",
-    "Bogotá-Quibdó": "1h 15m",
-    "Bogotá-Arauca": "1h 30m",
-    "Bogotá-Yopal": "1h 10m",
-    "Bogotá-Mocoa": "1h 35m",
-    "Bogotá-San José del Guaviare": "1h 5m",
-    "Bogotá-Leticia": "2h 15m",
-    "Bogotá-Mitú": "2h",
-    "Bogotá-Puerto Carreño": "1h 45m",
-    "Bogotá-San Andrés": "2h 30m",
-
-    // Desde Medellín
-    "Medellín-Cali": "50m",
-    "Medellín-Barranquilla": "1h 20m",
-    "Medellín-Cartagena": "1h 15m",
-    "Medellín-Pereira": "25m",
-    "Medellín-Manizales": "30m",
-    "Medellín-Armenia": "35m",
-
-    // Desde Cali
-    "Cali-Barranquilla": "1h 30m",
-    "Cali-Cartagena": "1h 25m",
-    "Cali-Pereira": "35m",
-    "Cali-Popayán": "45m",
-    "Cali-Pasto": "1h 15m",
-
-    // Desde Cartagena
-    "Cartagena-Barranquilla": "25m",
-    "Cartagena-Santa Marta": "45m",
-    "Cartagena-San Andrés": "1h 45m",
-
-    // Otras rutas comunes
-    "Pereira-Manizales": "20m",
-    "Pereira-Armenia": "15m",
-    "Santa Marta-Barranquilla": "35m",
-    "Cúcuta-Bucaramanga": "40m",
-  };
-
-  // Duración de vuelos internacionales (desde ciudades gateway colombianas)
-  const internationalDurations = {
-    // Desde Bogotá
-    "Bogotá-Madrid": "9h 30m",
-    "Bogotá-Londres": "10h 45m",
-    "Bogotá-New York": "5h 30m",
-    "Bogotá-Buenos Aires": "6h 15m",
-    "Bogotá-Miami": "3h 15m",
-
-    // Desde Medellín
-    "Medellín-Madrid": "9h 45m",
-    "Medellín-Londres": "11h",
-    "Medellín-New York": "5h 45m",
-    "Medellín-Buenos Aires": "6h 30m",
-    "Medellín-Miami": "3h 30m",
-
-    // Desde Cali
-    "Cali-Madrid": "10h 15m",
-    "Cali-Londres": "11h 30m",
-    "Cali-New York": "6h",
-    "Cali-Buenos Aires": "6h 45m",
-    "Cali-Miami": "3h 45m",
-
-    // Desde Cartagena
-    "Cartagena-Madrid": "8h 45m",
-    "Cartagena-Londres": "10h",
-    "Cartagena-New York": "4h 45m",
-    "Cartagena-Buenos Aires": "7h",
-    "Cartagena-Miami": "2h 30m",
-
-    // Desde Pereira
-    "Pereira-Madrid": "10h",
-    "Pereira-Londres": "11h 15m",
-    "Pereira-New York": "5h 50m",
-    "Pereira-Buenos Aires": "6h 35m",
-    "Pereira-Miami": "3h 40m",
-
-    // Vuelos de retorno (desde internacionales hacia colombianas)
-    "Madrid-Bogotá": "10h 15m",
-    "Londres-Bogotá": "11h 30m",
-    "New York-Bogotá": "5h 45m",
-    "Buenos Aires-Bogotá": "6h 30m",
-    "Miami-Bogotá": "3h 30m",
-  };
-
-  // Función para formatear precio en pesos colombianos
-  const formatPriceCOP = (price) => {
+  // Formatear precio en COP
+  const formatPrice = (price) => {
     return new Intl.NumberFormat("es-CO", {
       style: "currency",
       currency: "COP",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
     }).format(price);
   };
 
-  // Función para calcular precio basado en la ruta - MODIFICADA CON VARIACIÓN
-  const calculatePrice = (origin, destination, flightId) => {
-    const price = calculatePriceNumber(origin, destination, flightId);
-    return formatPriceCOP(price);
-  };
+  // ✅ Formatear hora (maneja ISO o texto plano)
+  const formatTime = (timeString) => {
+    if (!timeString) return "00:00";
 
-  const calculatePriceNumber = (origin, destination, flightId) => {
-    if (isInternationalFlight(origin, destination)) {
-      // Precios base internacionales en COP con variación por vuelo
-      const internationalBasePrices = {
-        Madrid: 2925000, // ~2,925,000 COP base
-        Londres: 3240000, // ~3,240,000 COP base
-        "New York": 2610000, // ~2,610,000 COP base
-        "Buenos Aires": 2340000, // ~2,340,000 COP base
-        Miami: 2025000, // ~2,025,000 COP base
-      };
-
-      // Encontrar la ciudad internacional (puede ser origen o destino)
-      const destinationCity = internationalCities.includes(destination)
-        ? destination
-        : origin;
-
-      const basePrice = internationalBasePrices[destinationCity] || 2700000;
-
-      // Variación basada en el ID del vuelo para que no sean todos iguales
-      // Diferentes porcentajes de variación para hacerlos atractivos
-      const variationFactors = {
-        1: 0.95, // 5% más barato
-        2: 1.05, // 5% más caro
-        3: 1.0, // Precio base
-        4: 0.9, // 10% más barato (mejor oferta)
-        5: 1.08, // 8% más caro (horario premium)
-      };
-
-      const variation = variationFactors[flightId] || 1.0;
-      return Math.round(basePrice * variation);
-    } else {
-      // Precios nacionales en COP (más económicos) con variación
-      const basePrice = 350000; // 350,000 COP base
-      const variationFactors = {
-        1: 0, // Precio base
-        2: 50000, // +50,000
-        3: 30000, // +30,000
-        4: -25000, // -25,000 (mejor oferta)
-        5: 15000, // +15,000
-      };
-
-      const variation = variationFactors[flightId] || 0;
-      return basePrice + variation; // Entre 325,000 y 400,000 COP
-    }
-  };
-
-  // Función para obtener la duración del vuelo
-  const getFlightDuration = (origin, destination) => {
-    // Buscar en vuelos internacionales primero
-    const internationalKey = `${origin}-${destination}`;
-    if (internationalDurations[internationalKey]) {
-      return internationalDurations[internationalKey];
-    }
-
-    // Buscar en vuelos nacionales
-    const nationalKey = `${origin}-${destination}`;
-    if (nationalDurations[nationalKey]) {
-      return nationalDurations[nationalKey];
-    }
-
-    // Buscar en reversa (destino-origen) por si está definido al revés
-    const reverseNationalKey = `${destination}-${origin}`;
-    if (nationalDurations[reverseNationalKey]) {
-      return nationalDurations[reverseNationalKey];
-    }
-
-    const reverseInternationalKey = `${destination}-${origin}`;
-    if (internationalDurations[reverseInternationalKey]) {
-      return internationalDurations[reverseInternationalKey];
-    }
-
-    // Duración por defecto para rutas no definidas
-    return "1h 15m";
-  };
-
-  // Función para determinar si es vuelo internacional
-  const isInternationalFlight = (origin, destination) => {
-    return (
-      internationalCities.includes(origin) ||
-      internationalCities.includes(destination)
-    );
-  };
-
-  // Función para calcular hora de llegada CON ZONA HORARIA
-  const calculateArrivalTime = (
-    departureTime,
-    duration,
-    origin,
-    destination
-  ) => {
     try {
-      const [hours, minutes] = departureTime.split(":").map(Number);
-      const durationMatch = duration.match(/(\d+)h\s*(\d+)m|(\d+)h|(\d+)m/);
+      const date = new Date(timeString);
+      if (!isNaN(date)) {
+        return date.toLocaleTimeString("es-CO", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        });
+      }
+      if (typeof timeString === "string" && timeString.includes(" ")) {
+        return timeString.split(" ")[1]?.substring(0, 5) || "00:00";
+      }
+      return timeString.substring(0, 5);
+    } catch {
+      return "00:00";
+    }
+  };
 
-      let totalMinutes = hours * 60 + minutes;
+  // ✅ Formatear fecha (maneja ISO o texto plano)
+  const formatDate = (dateString) => {
+    if (!dateString) return "Fecha no disponible";
 
-      if (durationMatch) {
-        if (durationMatch[1] && durationMatch[2]) {
-          // Formato "Xh Ym"
-          totalMinutes +=
-            parseInt(durationMatch[1]) * 60 + parseInt(durationMatch[2]);
-        } else if (durationMatch[3]) {
-          // Formato "Xh"
-          totalMinutes += parseInt(durationMatch[3]) * 60;
-        } else if (durationMatch[4]) {
-          // Formato "Xm"
-          totalMinutes += parseInt(durationMatch[4]);
-        }
+    try {
+      const date = new Date(dateString);
+      if (!isNaN(date)) {
+        return date.toLocaleDateString("es-CO", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      }
+      if (typeof dateString === "string") {
+        return dateString.split(" ")[0];
+      }
+      return "Fecha no disponible";
+    } catch {
+      return "Fecha no disponible";
+    }
+  };
+
+  // 🔥 FUNCIÓN MEJORADA Y ACORTADA: Parsear duración
+  const parseDuration = (duration) => {
+    // 1. Valor por defecto si no hay nada
+    if (!duration) {
+      console.log("❌ Duración vacía, usando 60min por defecto");
+      return 60;
+    }
+
+    // 2. Si ya es un número (minutos)
+    if (typeof duration === "number" && isFinite(duration)) {
+      return Math.max(0, Math.round(duration));
+    }
+
+    // 3. Si es un string
+    if (typeof duration === "string") {
+      const str = duration.trim();
+
+      // --- CASO 1: String de Fecha ISO (Lo más probable desde la BD) ---
+      // Ej: "1970-01-01T00:46:00.000Z"
+      if (str.includes('T') && (str.includes('Z') || str.includes('-'))) {
+        try {
+          const date = new Date(str);
+          if (!isNaN(date)) {
+            // Usamos UTC para evitar corrimientos por zona horaria
+            const hours = date.getUTCHours();
+            const minutes = date.getUTCMinutes();
+            const totalMinutes = (hours * 60) + minutes;
+            
+            if (totalMinutes > 0) {
+              console.log("✅ Duración parseada desde ISO Date:", totalMinutes, "minutos");
+              return totalMinutes;
+            }
+          }
+        } catch (e) { /* Ignorar y probar el siguiente formato */ }
       }
 
-      // Aplicar diferencia horaria si es vuelo internacional
-      const timeDifference =
-        (timeZones[destination] || 0) - (timeZones[origin] || 0);
-      totalMinutes += timeDifference * 60;
+      // --- CASO 2: Formato HH:MM:SS o HH:MM ---
+      // Ej: "00:46:00" o "00:46"
+      const colonMatch = str.match(/^(\d{1,2}):([0-5]\d)(?::([0-5]\d))?$/);
+      if (colonMatch) {
+        const hours = parseInt(colonMatch[1], 10);
+        const minutes = parseInt(colonMatch[2], 10);
+        const totalMinutes = hours * 60 + minutes;
+        console.log("✅ Duración parseada desde HH:MM(:SS):", totalMinutes, "minutos");
+        return totalMinutes;
+      }
+    }
 
+    // 4. Si nada funciona, usar el valor por defecto
+    console.log(`⚠️ No se pudo parsear "${duration}", usando 60min por defecto`);
+    return 60;
+  };
+
+  // 🔥 FUNCIÓN MEJORADA: Formatear duración para mostrar
+  const formatDuration = (duration) => {
+    const totalMinutes = parseDuration(duration);
+
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours > 0 && minutes > 0) {
+      return `${hours}h ${minutes.toString().padStart(2, "0")}m`;
+    } else if (hours > 0) {
+      return `${hours}h`;
+    } else {
+      return `${minutes}m`;
+    }
+  };
+
+  // 🔥 FUNCIÓN MEJORADA: Calcular hora de llegada
+  const calculateArrivalTime = (departureTime, duration) => {
+    if (!departureTime) return "00:00";
+
+    try {
+      // Parsear hora de salida
+      const [hours, minutes] = departureTime.split(":").map(Number);
+      let totalMinutes = hours * 60 + minutes;
+
+      // Parsear duración
+      const durationMinutes = parseDuration(duration);
+      console.log("✈️ Tiempo de vuelo:", durationMinutes, "minutos");
+
+      totalMinutes += durationMinutes;
+
+      // Calcular hora de llegada
       const arrivalHours = Math.floor(totalMinutes / 60) % 24;
       const arrivalMinutes = totalMinutes % 60;
 
-      return `${arrivalHours.toString().padStart(2, "0")}:${arrivalMinutes
+      const result = `${arrivalHours
+        .toString()
+        .padStart(2, "0")}:${arrivalMinutes.toString().padStart(2, "0")}`;
+      console.log("🛬 Hora de llegada calculada:", result);
+
+      return result;
+    } catch (error) {
+      console.error("Error calculando hora de llegada:", error);
+      return "00:00";
+    }
+  };
+
+  // 🔥 NUEVA FUNCIÓN: Calcular la fecha de retorno
+  const calculateReturnDate = (departureDate, duration) => {
+    if (!departureDate) return "";
+
+    try {
+      const date = new Date(departureDate);
+      const durationMinutes = parseDuration(duration);
+
+      // Agregar la duración del vuelo + 1 día para el retorno
+      date.setDate(date.getDate() + 1);
+
+      return date.toLocaleDateString("es-CO", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch (error) {
+      console.error("Error calculando fecha de retorno:", error);
+      return "";
+    }
+  };
+
+  // 🔥 NUEVA FUNCIÓN: Calcular hora de salida del vuelo de retorno
+  const calculateReturnDepartureTime = (arrivalTime) => {
+    if (!arrivalTime) return "10:00";
+
+    try {
+      const [hours, minutes] = arrivalTime.split(":").map(Number);
+      let totalMinutes = hours * 60 + minutes + 120; // +2 horas
+
+      const returnHours = Math.floor(totalMinutes / 60) % 24;
+      const returnMinutes = totalMinutes % 60;
+
+      return `${returnHours.toString().padStart(2, "0")}:${returnMinutes
         .toString()
         .padStart(2, "0")}`;
     } catch (error) {
-      console.error("Error calculating arrival time:", error);
-      return "22:30"; // Hora por defecto en caso de error
+      console.error("Error calculando hora de retorno:", error);
+      return "10:00";
     }
   };
 
-  // Función para obtener código de aeropuerto
-  const getAirportCode = (city) => {
-    const airportCodes = {
-      Bogotá: "BOG",
-      Medellín: "MDE",
-      Cali: "CLO",
-      Barranquilla: "BAQ",
-      Cartagena: "CTG",
-      Cúcuta: "CUC",
-      Bucaramanga: "BGA",
-      Pereira: "PEI",
-      "Santa Marta": "SMR",
-      Ibagué: "IBE",
-      Pasto: "PSO",
-      Manizales: "MZL",
-      Neiva: "NVA",
-      Villavicencio: "VVC",
-      Armenia: "AXM",
-      Valledupar: "VUP",
-      Montería: "MTR",
-      Sincelejo: "SQZ",
-      Popayán: "PPN",
-      Riohacha: "RCH",
-      Tunja: "TUN",
-      Florencia: "FLA",
-      Quibdó: "UIB",
-      Arauca: "AUC",
-      Yopal: "EYP",
-      Mocoa: "MQZ",
-      "San José del Guaviare": "SJE",
-      Leticia: "LET",
-      Mitú: "MVP",
-      "Puerto Carreño": "PCR",
-      "San Andrés": "ADZ",
-      Madrid: "MAD",
-      Londres: "LHR",
-      "New York": "JFK",
-      "Buenos Aires": "EZE",
-      Miami: "MIA",
+  // Manejar selección de vuelo
+  const handleSelectFlight = (flight) => {
+    if (!isAuthenticated) {
+      alert("Debes iniciar sesión para reservar un vuelo");
+      navigate("/login", {
+        state: {
+          from: "/search-flights",
+          searchParams: searchParams,
+        },
+      });
+      return;
+    }
+
+    // Preparar datos del vuelo para ReserveFlight
+    const flightData = {
+      flightNumber: flight.id_vuelo,
+      airline: "VivaSky Airlines",
+      price: formatPrice(flight.costo_economico),
+      priceNumber: Number(flight.costo_economico) || 0,
+      costo_vip: flight.costo_vip || Math.round(flight.costo_economico * 1.5),
+      duration: formatDuration(flight.duracion),
+      stops: flight.tipo_vuelo === "directo" ? "Directo" : "Directo",
+      departure: {
+        city: flight.origen,
+        airport: flight.origen,
+        time: formatTime(flight.hora_salida),
+        date: formatDate(flight.fecha_salida),
+      },
+      arrival: {
+        city: flight.destino,
+        airport: flight.destino,
+        time: calculateArrivalTime(
+          formatTime(flight.hora_salida),
+          flight.duracion
+        ),
+        date: formatDate(flight.fecha_salida),
+      },
     };
 
-    return airportCodes[city] || "---";
-  };
+    console.log("🎫 Datos del vuelo para reserva:", flightData);
 
-  // Función para aplicar ordenamientos
-  const applySorting = () => {
-    let flights = generateFlightResults(searchParams);
-
-    // Aplicar ordenamientos
-    switch (sortOption) {
-      case "price-low":
-        flights.sort((a, b) => a.priceNumber - b.priceNumber);
-        break;
-      case "price-high":
-        flights.sort((a, b) => b.priceNumber - a.priceNumber);
-        break;
-      case "duration-short":
-        flights.sort((a, b) => {
-          const durationA = convertDurationToMinutes(a.duration);
-          const durationB = convertDurationToMinutes(b.duration);
-          return durationA - durationB;
-        });
-        break;
-      case "duration-long":
-        flights.sort((a, b) => {
-          const durationA = convertDurationToMinutes(a.duration);
-          const durationB = convertDurationToMinutes(b.duration);
-          return durationB - durationA;
-        });
-        break;
-      case "departure-early":
-        flights.sort((a, b) => {
-          const timeA = convertTimeToMinutes(a.departure.time);
-          const timeB = convertTimeToMinutes(b.departure.time);
-          return timeA - timeB;
-        });
-        break;
-      case "departure-late":
-        flights.sort((a, b) => {
-          const timeA = convertTimeToMinutes(a.departure.time);
-          const timeB = convertTimeToMinutes(b.departure.time);
-          return timeB - timeA;
-        });
-        break;
-      case "recommended":
-      default:
-        // Orden por defecto (recomendado) - mantiene el orden original
-        break;
-    }
-
-    setFilteredFlights(flights);
-  };
-
-  // Función auxiliar para convertir duración a minutos
-  const convertDurationToMinutes = (duration) => {
-    const match = duration.match(/(\d+)h\s*(\d+)m|(\d+)h|(\d+)m/);
-    if (match) {
-      if (match[1] && match[2]) {
-        return parseInt(match[1]) * 60 + parseInt(match[2]);
-      } else if (match[3]) {
-        return parseInt(match[3]) * 60;
-      } else if (match[4]) {
-        return parseInt(match[4]);
-      }
-    }
-    return 0;
-  };
-
-  // Función auxiliar para convertir hora a minutos
-  const convertTimeToMinutes = (time) => {
-    const [hours, minutes] = time.split(":").map(Number);
-    return hours * 60 + minutes;
-  };
-
-  // Datos de ejemplo para vuelos - CON PRECIOS VARIADOS
-  const generateFlightResults = (currentSearchParams = searchParams) => {
-    try {
-      const baseFlights = [
-        {
-          id: 1,
-          airline: "VivaSky Airlines",
-          flightNumber: "VS202",
-          departure: {
-            city: currentSearchParams.origin,
-            time: "08:00",
-            date: currentSearchParams.departureDate,
-            airport: getAirportCode(currentSearchParams.origin),
-          },
-          arrival: {
-            city: currentSearchParams.destination,
-            time: calculateArrivalTime(
-              "08:00",
-              getFlightDuration(
-                currentSearchParams.origin,
-                currentSearchParams.destination
-              ),
-              currentSearchParams.origin,
-              currentSearchParams.destination
-            ),
-            date: currentSearchParams.departureDate,
-            airport: getAirportCode(currentSearchParams.destination),
-          },
-          duration: getFlightDuration(
-            currentSearchParams.origin,
-            currentSearchParams.destination
-          ),
-          stops: "Directo",
-          price: calculatePrice(
-            currentSearchParams.origin,
-            currentSearchParams.destination,
-            1
-          ),
-          priceNumber: calculatePriceNumber(
-            currentSearchParams.origin,
-            currentSearchParams.destination,
-            1
-          ),
-          baggage: isInternationalFlight(
-            currentSearchParams.origin,
-            currentSearchParams.destination
-          )
-            ? "23kg"
-            : "15kg",
-          airlineLogo: "✈️",
-        },
-        {
-          id: 2,
-          airline: "VivaSky Airlines",
-          flightNumber: "VS455",
-          departure: {
-            city: currentSearchParams.origin,
-            time: "14:20",
-            date: currentSearchParams.departureDate,
-            airport: getAirportCode(currentSearchParams.origin),
-          },
-          arrival: {
-            city: currentSearchParams.destination,
-            time: calculateArrivalTime(
-              "14:20",
-              getFlightDuration(
-                currentSearchParams.origin,
-                currentSearchParams.destination
-              ),
-              currentSearchParams.origin,
-              currentSearchParams.destination
-            ),
-            date: currentSearchParams.departureDate,
-            airport: getAirportCode(currentSearchParams.destination),
-          },
-          duration: getFlightDuration(
-            currentSearchParams.origin,
-            currentSearchParams.destination
-          ),
-          stops: "Directo",
-          price: calculatePrice(
-            currentSearchParams.origin,
-            currentSearchParams.destination,
-            2
-          ),
-          priceNumber: calculatePriceNumber(
-            currentSearchParams.origin,
-            currentSearchParams.destination,
-            2
-          ),
-          baggage: isInternationalFlight(
-            currentSearchParams.origin,
-            currentSearchParams.destination
-          )
-            ? "23kg"
-            : "15kg",
-          airlineLogo: "✈️",
-        },
-        {
-          id: 3,
-          airline: "VivaSky Airlines",
-          flightNumber: "VS789",
-          departure: {
-            city: currentSearchParams.origin,
-            time: "11:30",
-            date: currentSearchParams.departureDate,
-            airport: getAirportCode(currentSearchParams.origin),
-          },
-          arrival: {
-            city: currentSearchParams.destination,
-            time: calculateArrivalTime(
-              "11:30",
-              getFlightDuration(
-                currentSearchParams.origin,
-                currentSearchParams.destination
-              ),
-              currentSearchParams.origin,
-              currentSearchParams.destination
-            ),
-            date: currentSearchParams.departureDate,
-            airport: getAirportCode(currentSearchParams.destination),
-          },
-          duration: getFlightDuration(
-            currentSearchParams.origin,
-            currentSearchParams.destination
-          ),
-          stops: "Directo",
-          price: calculatePrice(
-            currentSearchParams.origin,
-            currentSearchParams.destination,
-            3
-          ),
-          priceNumber: calculatePriceNumber(
-            currentSearchParams.origin,
-            currentSearchParams.destination,
-            3
-          ),
-          baggage: isInternationalFlight(
-            currentSearchParams.origin,
-            currentSearchParams.destination
-          )
-            ? "23kg"
-            : "15kg",
-          airlineLogo: "✈️",
-        },
-        {
-          id: 4,
-          airline: "VivaSky Airlines",
-          flightNumber: "VS321",
-          departure: {
-            city: currentSearchParams.origin,
-            time: "06:15",
-            date: currentSearchParams.departureDate,
-            airport: getAirportCode(currentSearchParams.origin),
-          },
-          arrival: {
-            city: currentSearchParams.destination,
-            time: calculateArrivalTime(
-              "06:15",
-              getFlightDuration(
-                currentSearchParams.origin,
-                currentSearchParams.destination
-              ),
-              currentSearchParams.origin,
-              currentSearchParams.destination
-            ),
-            date: currentSearchParams.departureDate,
-            airport: getAirportCode(currentSearchParams.destination),
-          },
-          duration: getFlightDuration(
-            currentSearchParams.origin,
-            currentSearchParams.destination
-          ),
-          stops: "Directo",
-          price: calculatePrice(
-            currentSearchParams.origin,
-            currentSearchParams.destination,
-            4
-          ),
-          priceNumber: calculatePriceNumber(
-            currentSearchParams.origin,
-            currentSearchParams.destination,
-            4
-          ),
-          baggage: isInternationalFlight(
-            currentSearchParams.origin,
-            currentSearchParams.destination
-          )
-            ? "23kg"
-            : "15kg",
-          airlineLogo: "✈️",
-        },
-        {
-          id: 5,
-          airline: "VivaSky Airlines",
-          flightNumber: "VS654",
-          departure: {
-            city: currentSearchParams.origin,
-            time: "19:45",
-            date: currentSearchParams.departureDate,
-            airport: getAirportCode(currentSearchParams.origin),
-          },
-          arrival: {
-            city: currentSearchParams.destination,
-            time: calculateArrivalTime(
-              "19:45",
-              getFlightDuration(
-                currentSearchParams.origin,
-                currentSearchParams.destination
-              ),
-              currentSearchParams.origin,
-              currentSearchParams.destination
-            ),
-            date: currentSearchParams.departureDate,
-            airport: getAirportCode(currentSearchParams.destination),
-          },
-          duration: getFlightDuration(
-            currentSearchParams.origin,
-            currentSearchParams.destination
-          ),
-          stops: "Directo",
-          price: calculatePrice(
-            currentSearchParams.origin,
-            currentSearchParams.destination,
-            5
-          ),
-          priceNumber: calculatePriceNumber(
-            currentSearchParams.origin,
-            currentSearchParams.destination,
-            5
-          ),
-          baggage: isInternationalFlight(
-            currentSearchParams.origin,
-            currentSearchParams.destination
-          )
-            ? "23kg"
-            : "15kg",
-          airlineLogo: "✈️",
-        },
-      ];
-
-      return baseFlights;
-    } catch (error) {
-      console.error("Error generating flight results:", error);
-      // En caso de error, devolver vuelos por defecto
-      return [
-        {
-          id: 1,
-          airline: "VivaSky Airlines",
-          flightNumber: "VS202",
-          departure: {
-            city: currentSearchParams.origin,
-            time: "08:00",
-            date: currentSearchParams.departureDate,
-            airport: getAirportCode(currentSearchParams.origin),
-          },
-          arrival: {
-            city: currentSearchParams.destination,
-            time: "22:30",
-            date: currentSearchParams.departureDate,
-            airport: getAirportCode(currentSearchParams.destination),
-          },
-          duration: "9h 30m",
-          stops: "Directo",
-          price: formatPriceCOP(2925000),
-          priceNumber: 2925000,
-          baggage: "23kg",
-          airlineLogo: "✈️",
-        },
-      ];
-    }
-  };
-
-  const handleLogoClick = () => {
-    navigate("/");
-  };
-
-  const handleBackToHome = () => {
-    navigate("/");
-  };
-
-  const handleBookFlight = (flight) => {
+    // Navegar a ReserveFlight con los datos
     navigate("/reserve-flight", {
       state: {
-        flight: flight,
+        flight: flightData,
         searchParams: searchParams,
       },
     });
   };
 
-  // NUEVA FUNCIÓN: Agregar directamente al carrito
-  const handleAddToCartDirectly = (flight) => {
+  // 🔥 NUEVA FUNCIÓN: Manejar agregar al carrito
+  const handleAddToCart = (flight) => {
     if (!isAuthenticated) {
-      alert("⚠️ Debes iniciar sesión para agregar vuelos al carrito");
-      navigate("/login", { state: { from: location.pathname } });
+      alert("Debes iniciar sesión para agregar vuelos al carrito");
+      navigate("/login", {
+        state: {
+          from: "/search-flights",
+          searchParams: searchParams,
+        },
+      });
       return;
     }
-    if (!canMakeReservations()) {
-      showAdminRestrictionMessage();
+
+    // 🔥 NUEVO: Verificar si es admin
+    if (isAdminUser()) {
+      alert("⛔ Los administradores no pueden agregar vuelos al carrito");
       return;
     }
+
+    // Preparar datos del vuelo para el carrito
     const cartItem = {
-      ...flight,
+      id: `flight_${flight.id_vuelo}_${Date.now()}`,
+      flightNumber: `VS${flight.id_vuelo}`,
+      airline: "VivaSky Airlines",
+      price: formatPrice(flight.costo_economico),
+      priceNumber: Number(flight.costo_economico) || 0,
+      costo_vip: flight.costo_vip || Math.round(flight.costo_economico * 1.5),
+      duration: formatDuration(flight.duracion),
+      stops: flight.tipo_vuelo === "directo" ? "Directo" : "Directo",
+      departure: {
+        city: flight.origen,
+        airport: flight.origen,
+        time: formatTime(flight.hora_salida),
+        date: formatDate(flight.fecha_salida),
+      },
+      arrival: {
+        city: flight.destino,
+        airport: flight.destino,
+        time: calculateArrivalTime(
+          formatTime(flight.hora_salida),
+          flight.duracion
+        ),
+        date: formatDate(flight.fecha_salida),
+      },
       searchParams: searchParams,
-      selectedClass: "economy", // Clase por defecto
-      addedAt: new Date().toISOString(),
-      totalPrice: flight.priceNumber,
-      cartId: `${flight.id}-economy-${Date.now()}`,
     };
 
-    const existingCart = JSON.parse(
+    console.log("🛒 Item agregado al carrito:", cartItem);
+
+    // Obtener carrito actual del localStorage
+    const currentCart = JSON.parse(
       localStorage.getItem("vivasky_cart") || "[]"
     );
 
-    // Verificar si ya existe este vuelo exacto
-    const exists = existingCart.some(
+    // Verificar si el vuelo ya está en el carrito
+    const isAlreadyInCart = currentCart.some(
       (item) =>
-        item.id === flight.id &&
-        item.searchParams?.origin === searchParams.origin &&
-        item.searchParams?.destination === searchParams.destination &&
-        item.selectedClass === "economy"
+        item.flightNumber === cartItem.flightNumber &&
+        item.departure.date === cartItem.departure.date
     );
 
-    if (!exists) {
-      existingCart.push(cartItem);
-      localStorage.setItem("vivasky_cart", JSON.stringify(existingCart));
-      alert(`✅ Vuelo ${flight.flightNumber} agregado al carrito`);
+    if (isAlreadyInCart) {
+      alert("✈️ Este vuelo ya está en tu carrito");
+      return;
+    }
 
-      // Forzar re-render del componente para actualizar la UI
-      setFilteredFlights([...filteredFlights]);
-    } else {
-      alert("⚠️ Este vuelo ya está en tu carrito");
+    // Agregar al carrito
+    const updatedCart = [...currentCart, cartItem];
+    localStorage.setItem("vivasky_cart", JSON.stringify(updatedCart));
+
+    alert("✅ Vuelo agregado al carrito");
+  };
+
+  // 🔥 NUEVA FUNCIÓN: Obtener contador del carrito
+  const getCartItemCount = () => {
+    try {
+      const cart = JSON.parse(localStorage.getItem("vivasky_cart") || "[]");
+      return cart.length;
+    } catch {
+      return 0;
     }
   };
-  const showAdminRestrictionMessage = () => {
-    alert(
-      `⛔ Acción no permitida\n\nLos usuarios con rol de "${userInfo.role}" no pueden realizar reservas ni compras de vuelos.\n\nEsta función está disponible únicamente para usuarios regulares (Cliente/Usuario).`
-    );
+
+  // ✅ Función para nueva búsqueda - redirige al home
+  const handleNewSearch = () => {
+    navigate("/");
   };
+
+  // ✅ Función para volver al home
+  const handleBackToHome = () => {
+    navigate("/");
+  };
+
   return (
     <div className="app">
-      {/* Header */}
+      {/* 🔹 HEADER */}
       <header className="header">
         <div
           className="logo-container"
-          onClick={handleLogoClick}
+          onClick={handleBackToHome}
           style={{ cursor: "pointer" }}
         >
           <img
@@ -1001,233 +484,317 @@ const SearchFlights = () => {
           <span className="logo-text">VivaSky</span>
         </div>
 
-        {/* Mostrar información del usuario si está logeado - CON MENÚ DESPLEGABLE */}
-        {isAuthenticated && userInfo ? (
-          <UserMenu userInfo={userInfo} onLogout={handleLogout} />
-        ) : (
-          <nav className="navigation">
-            <a href="#" onClick={handleComingSoon}>
-              Noticias
-            </a>
-            <a href="#" onClick={handleComingSoon}>
-              Destinos
-            </a>
-          </nav>
-        )}
+        <nav className="navigation">
+          {isAuthenticated ? (
+            <div className="user-welcome">
+              <span>Hola, {userName}</span>
 
-        <button className="back-btn" onClick={handleBackToHome}>
-          Volver al inicio
+              {/* 🔥 MODIFICADO: Solo mostrar carrito si NO es admin */}
+              {!isAdminUser() && (
+                <button
+                  className="nav-btn cart-btn"
+                  onClick={() => navigate("/cart")}
+                  style={{ position: "relative", marginRight: "10px" }}
+                >
+                  🛒 Carrito
+                  {getCartItemCount() > 0 && (
+                    <span className="cart-badge">{getCartItemCount()}</span>
+                  )}
+                </button>
+              )}
+
+              <button className="logout-btn" onClick={handleLogout}>
+                Cerrar Sesión
+              </button>
+            </div>
+          ) : (
+            <>
+              <button className="nav-btn" onClick={() => navigate("/login")}>
+                Iniciar Sesión
+              </button>
+              <button className="nav-btn" onClick={() => navigate("/register")}>
+                Registrarse
+              </button>
+            </>
+          )}
+        </nav>
+
+        {/* ✅ CORREGIDO: Botón Nueva Búsqueda */}
+        <button className="back-btn" onClick={handleNewSearch}>
+          Nueva Búsqueda
         </button>
       </header>
 
-      {/* Banner de búsqueda */}
-      <div className="search-banner">
-        <div className="search-info">
-          <h2>Vuelos encontrados</h2>
-          <div className="route-info">
-            <span className="route-city">{searchParams.origin}</span>
-            <span className="route-arrow">→</span>
-            <span className="route-city">{searchParams.destination}</span>
-          </div>
-          <div className="date-info">
-            {searchParams.tripType === "roundtrip"
-              ? `${searchParams.departureDate} - ${searchParams.returnDate}`
-              : searchParams.departureDate}{" "}
-            •{" "}
-            {searchParams.tripType === "roundtrip"
-              ? "Ida y vuelta"
-              : "Solo ida"}
-          </div>
-        </div>
-      </div>
-
-      {/* Controles de ordenamiento */}
-      <div className="results-controls">
-        <div className="controls-container">
-          <div className="filter-group">
-            <label>Ordenar por:</label>
-            <select
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
-              className="control-select"
-            >
-              <option value="recommended">Recomendado</option>
-              <option value="price-low">Precio (más bajo)</option>
-              <option value="price-high">Precio (más alto)</option>
-              <option value="departure-early">Salida (más temprano)</option>
-              <option value="departure-late">Salida (más tarde)</option>
-            </select>
-          </div>
-
-          <div className="filter-group">
-            <span className="results-count">
-              {filteredFlights.length} vuelos encontrados
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Resultados de vuelos */}
-      <section className="flight-results">
-        <div className="results-container">
-          {filteredFlights.length > 0 ? (
-            filteredFlights.map((flight) => (
-              <div key={`${flight.id}-${Date.now()}`} className="flight-card">
-                <div className="flight-header">
-                  <div className="airline-info">
-                    <span className="airline-logo">{flight.airlineLogo}</span>
-                    <div>
-                      <div className="airline-name">{flight.airline}</div>
-                      <div className="flight-number">{flight.flightNumber}</div>
-                    </div>
-                  </div>
-                  <div className="flight-price">
-                    <div className="price-amount">{flight.price}</div>
-                    <div className="price-description">por persona</div>
-                  </div>
-                </div>
-
-                <div className="flight-details">
-                  <div className="route-details">
-                    <div className="departure-info">
-                      <div className="time">{flight.departure.time}</div>
-                      <div className="city">{flight.departure.city}</div>
-                      <div className="airport">{flight.departure.airport}</div>
-                      <div className="date">{flight.departure.date}</div>
-                    </div>
-
-                    <div className="journey-info">
-                      <div className="duration">{flight.duration}</div>
-                      <div className="journey-line">
-                        <div className="line"></div>
-                        <div className="plane-icon">✈️</div>
-                      </div>
-                      <div className="stops">{flight.stops}</div>
-                    </div>
-
-                    <div className="arrival-info">
-                      <div className="time">{flight.arrival.time}</div>
-                      <div className="city">{flight.arrival.city}</div>
-                      <div className="airport">{flight.arrival.airport}</div>
-                      <div className="date">{flight.arrival.date}</div>
-                      {isInternationalFlight(
-                        searchParams.origin,
-                        searchParams.destination
-                      ) && <div className="timezone-info">Hora local</div>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* MOSTRAR VUELO DE RETORNO SOLO PARA IDA Y VUELTA */}
-                {searchParams.tripType === "roundtrip" && (
-                  <div className="return-flight-section">
-                    <div className="section-divider">
-                      <span>Vuelo de retorno</span>
-                    </div>
-
-                    <div className="flight-details">
-                      <div className="route-details">
-                        <div className="departure-info">
-                          <div className="time">10:15</div>
-                          <div className="city">{searchParams.destination}</div>
-                          <div className="airport">
-                            {getAirportCode(searchParams.destination)}
-                          </div>
-                          <div className="date">{searchParams.returnDate}</div>
-                        </div>
-
-                        <div className="journey-info">
-                          <div className="duration">
-                            {getFlightDuration(
-                              searchParams.destination,
-                              searchParams.origin
-                            )}
-                          </div>
-                          <div className="journey-line">
-                            <div className="line"></div>
-                            <div className="plane-icon">✈️</div>
-                          </div>
-                          <div className="stops">Directo</div>
-                        </div>
-
-                        <div className="arrival-info">
-                          <div className="time">
-                            {calculateArrivalTime(
-                              "10:15",
-                              getFlightDuration(
-                                searchParams.destination,
-                                searchParams.origin
-                              ),
-                              searchParams.destination,
-                              searchParams.origin
-                            )}
-                          </div>
-                          <div className="city">{searchParams.origin}</div>
-                          <div className="airport">
-                            {getAirportCode(searchParams.origin)}
-                          </div>
-                          <div className="date">{searchParams.returnDate}</div>
-                          {isInternationalFlight(
-                            searchParams.destination,
-                            searchParams.origin
-                          ) && <div className="timezone-info">Hora local</div>}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flight-actions">
-                  <button
-                    className="book-btn"
-                    onClick={() => handleBookFlight(flight)}
-                  >
-                    {searchParams.tripType === "roundtrip"
-                      ? "Seleccionar vuelo ida y vuelta"
-                      : "Seleccionar vuelo"}
-                  </button>
-
-                  {/* BOTÓN PARA AGREGAR DIRECTAMENTE AL CARRITO */}
-                  {isAuthenticated && (
-                    <button
-                      className={`book-btn ${
-                        !canMakeReservations() ? "disabled-btn" : ""
-                      }`}
-                      style={{
-                        backgroundColor: canMakeReservations()
-                          ? "#28a745"
-                          : "#6c757d",
-                        marginTop: "10px",
-                        cursor: canMakeReservations()
-                          ? "pointer"
-                          : "not-allowed",
-                        opacity: canMakeReservations() ? 1 : 0.6,
-                      }}
-                      onClick={() => handleAddToCartDirectly(flight)}
-                      title={
-                        !canMakeReservations()
-                          ? `Los usuarios ${userInfo?.role} no pueden realizar compras`
-                          : ""
-                      }
-                    >
-                      {canMakeReservations()
-                        ? "🛒 Agregar al Carrito"
-                        : `⛔ Solo para Clientes`}
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="no-results">
-              <h3>No se encontraron vuelos</h3>
-              <p>Intenta ajustar tus criterios de búsqueda</p>
+      {/* 🔹 CONTENIDO PRINCIPAL */}
+      <main className="main-content">
+        <div className="search-header">
+          <h2>✈️ Resultados de búsqueda</h2>
+          <div className="search-summary">
+            <div className="search-params">
+              <span>
+                <strong>Origen:</strong> {searchParams.origin || "—"}
+              </span>
+              <span>
+                <strong>Destino:</strong> {searchParams.destination || "—"}
+              </span>
+              <span>
+                <strong>Fecha salida:</strong>{" "}
+                {formatDate(
+                  searchParams.departureDateSQL || searchParams.departureDate
+                ) || "—"}
+              </span>
+              {searchParams.tripType === "roundtrip" && (
+                <span>
+                  <strong>Fecha regreso:</strong>{" "}
+                  {formatDate(searchParams.returnDate) || "—"}
+                </span>
+              )}
+              <span>
+                <strong>Tipo:</strong>{" "}
+                {searchParams.tripType === "roundtrip"
+                  ? "Ida y Vuelta"
+                  : "Solo Ida"}
+              </span>
             </div>
-          )}
+          </div>
         </div>
-      </section>
+
+        {loading && (
+          <div className="loading-container">
+            <div className="spinner"></div>
+            <p>Cargando vuelos disponibles...</p>
+          </div>
+        )}
+
+        {errorMsg && (
+          <div className="error-container">
+            <div className="error-icon">❌</div>
+            <h3>No se encontraron vuelos</h3>
+            <p>{errorMsg}</p>
+            <button className="back-btn" onClick={handleNewSearch}>
+              Intentar nueva búsqueda
+            </button>
+          </div>
+        )}
+
+        {!loading && !errorMsg && (
+          <div className="flights-results-container">
+            <div className="results-info">
+              <h3>Vuelos disponibles ({flights.length})</h3>
+              <p>
+                Selecciona un vuelo para continuar con tu reserva o agrégalo al
+                carrito
+              </p>
+            </div>
+
+            <div className="flights-grid-enhanced">
+              {flights.length > 0 ? (
+                flights.map((flight) => {
+                  // Solo mostrar vuelos activos
+                  if (flight.estado !== "activo") return null;
+
+                  const fechaSalida = formatDate(flight.fecha_salida);
+                  const horaSalida = formatTime(flight.hora_salida);
+                  const horaLlegada = calculateArrivalTime(
+                    horaSalida,
+                    flight.duracion
+                  );
+                  const duracion = formatDuration(flight.duracion);
+                  const tipo = String(flight.tipo_vuelo || "Directo");
+
+                  // 🔥 NUEVO: Calcular información del vuelo de retorno si es ida y vuelta
+                  const isRoundTrip = searchParams.tripType === "roundtrip";
+                  const fechaRetorno = isRoundTrip
+                    ? calculateReturnDate(flight.fecha_salida, flight.duracion)
+                    : "";
+                  const horaSalidaRetorno = isRoundTrip
+                    ? calculateReturnDepartureTime(horaLlegada)
+                    : "";
+                  const horaLlegadaRetorno = isRoundTrip
+                    ? calculateArrivalTime(horaSalidaRetorno, flight.duracion)
+                    : "";
+
+                  console.log("🎯 Vuelo renderizado:", {
+                    origen: flight.origen,
+                    destino: flight.destino,
+                    tipoViaje: searchParams.tripType,
+                    esIdaVuelta: isRoundTrip,
+                    fechaRetorno: fechaRetorno,
+                  });
+
+                  return (
+                    <div
+                      key={flight.id_vuelo}
+                      className={`flight-card-enhanced ${
+                        isRoundTrip ? "with-return" : ""
+                      }`}
+                    >
+                      <div className="flight-card-header">
+                        <div className="airline-info">
+                          <span className="airline-logo">✈️</span>
+                          <div>
+                            <h4>VivaSky Airlines</h4>
+                            <span className="flight-number">
+                              VSK-{flight.id_vuelo}
+                              {isRoundTrip && (
+                                <span className="round-trip-badge">
+                                  🔄 Ida y Vuelta
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flight-price">
+                          {formatPrice(
+                            isRoundTrip
+                              ? flight.costo_economico * 2
+                              : flight.costo_economico
+                          )}
+                          <span className="price-note">
+                            {isRoundTrip
+                              ? "económico (ida y vuelta)"
+                              : "económico"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* VUELO DE IDA */}
+                      <div className="flight-route">
+                        <div className="route-segment">
+                          <div className="time">{horaSalida}</div>
+                          <div className="place">
+                            <div className="city">{flight.origen}</div>
+                            <div className="airport">{flight.origen}</div>
+                          </div>
+                          <div className="date">{fechaSalida}</div>
+                        </div>
+
+                        <div className="route-middle">
+                          <div className="duration">{duracion}</div>
+                          <div className="route-line">
+                            <div className="line"></div>
+                            <div className="plane">✈️</div>
+                          </div>
+                          <div className="stops">
+                            {tipo === "directo" ? "Directo" : "Directo"}
+                          </div>
+                        </div>
+
+                        <div className="route-segment">
+                          <div className="time">{horaLlegada}</div>
+                          <div className="place">
+                            <div className="city">{flight.destino}</div>
+                            <div className="airport">{flight.destino}</div>
+                          </div>
+                          <div className="date">{fechaSalida}</div>
+                        </div>
+                      </div>
+
+                      {/* 🔥 NUEVO: VUELO DE VUELTA - Solo mostrar si es ida y vuelta */}
+                      {isRoundTrip && (
+                        <div className="return-flight-section">
+                          <div className="section-divider">
+                            <span>🔄 Vuelo de Retorno</span>
+                          </div>
+
+                          <div className="flight-route return-route">
+                            <div className="route-segment">
+                              <div className="time">{horaSalidaRetorno}</div>
+                              <div className="place">
+                                <div className="city">{flight.destino}</div>
+                                <div className="airport">{flight.destino}</div>
+                              </div>
+                              <div className="date">{fechaRetorno}</div>
+                            </div>
+
+                            <div className="route-middle">
+                              <div className="duration">{duracion}</div>
+                              <div className="route-line">
+                                <div className="line"></div>
+                                <div className="plane">↩️</div>
+                              </div>
+                              <div className="stops">
+                                {tipo === "directo" ? "Directo" : "Directo"}
+                              </div>
+                            </div>
+
+                            <div className="route-segment">
+                              <div className="time">{horaLlegadaRetorno}</div>
+                              <div className="place">
+                                <div className="city">{flight.origen}</div>
+                                <div className="airport">{flight.origen}</div>
+                              </div>
+                              <div className="date">{fechaRetorno}</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flight-features">
+                        <div className="feature">
+                          <span>🎒</span>
+                          <span>23kg equipaje</span>
+                        </div>
+                        <div className="feature">
+                          <span>💺</span>
+                          <span>Asiento estándar</span>
+                        </div>
+                        <div className="feature">
+                          <span>🥤</span>
+                          <span>Refresco incluido</span>
+                        </div>
+                        {isRoundTrip && (
+                          <div className="feature">
+                            <span>🔄</span>
+                            <span>Incluye vuelo de retorno</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flight-actions">
+                        <button
+                          className="select-flight-btn"
+                          onClick={() => handleSelectFlight(flight)}
+                        >
+                          ✈️{" "}
+                          {isRoundTrip
+                            ? "Seleccionar Ida y Vuelta"
+                            : "Seleccionar Vuelo"}
+                        </button>
+
+                        {!isAdminUser() && (
+                          <button
+                            className="add-to-cart-btn"
+                            onClick={() => handleAddToCart(flight)}
+                          >
+                            🛒 Agregar al Carrito
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="no-flights-enhanced">
+                  <div className="no-flights-icon">✈️</div>
+                  <h3>No hay vuelos disponibles</h3>
+                  <p>No encontramos vuelos que coincidan con tu búsqueda.</p>
+                  <button className="back-btn" onClick={handleNewSearch}>
+                    Intentar nueva búsqueda
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* 🔹 FOOTER */}
+      <footer className="footer">
+        <p>© 2025 VivaSky Airlines - Todos los derechos reservados</p>
+      </footer>
     </div>
   );
-};
+}
 
 export default SearchFlights;
