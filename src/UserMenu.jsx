@@ -40,13 +40,13 @@ const UserMenu = ({ userInfo, onLogout }) => {
       "manage-flights": () => navigate("/manage-flights"),
       "cancel-tickets": () => navigate("/cancel-tickets"),
       "manage-news": () => navigate("/manage-news"),
-      "control-panel": () => navigate("/control-panel"),
       messaging: () => navigate("/messaging"),
       history: () => navigate("/history"),
 
       // Usuario
       "check-in": () => navigate("/check-in"),
       "balance-payments": () => navigate("/balance-payments"),
+      cart: () => navigate("/cart"), // NUEVA OPCIÓN
     };
 
     if (actions[action]) {
@@ -62,15 +62,10 @@ const UserMenu = ({ userInfo, onLogout }) => {
     ];
 
     const roleSpecificItems = {
-      root: [
-        { id: "create-admin", label: "Crear Administrador", icon: "👨‍💼" },
-        { id: "control-panel", label: "Panel de Control", icon: "⚙️" },
-        { id: "manage-flights", label: "Gestionar Vuelos", icon: "✈️" },
-      ],
+      root: [{ id: "create-admin", label: "Crear Administrador", icon: "👨‍💼" }],
       administrador: [
         { id: "edit-info", label: "Editar Perfil", icon: "✏️" },
         { id: "change-password", label: "Cambiar Contraseña", icon: "🔒" },
-        { id: "control-panel", label: "Panel de Control", icon: "⚙️" },
         { id: "manage-flights", label: "Gestionar Vuelos", icon: "✈️" },
         { id: "cancel-tickets", label: "Cancelar Tiquetes", icon: "🎫" },
         { id: "manage-news", label: "Gestionar Noticias", icon: "📰" },
@@ -79,6 +74,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
         { id: "edit-info", label: "Editar Información", icon: "✏️" },
         { id: "change-password", label: "Cambiar Contraseña", icon: "🔒" },
         { id: "cancel-tickets", label: "Cancelar Tiquete", icon: "🎫" },
+        { id: "cart", label: "Carrito de Compras", icon: "🛒" }, // NUEVA OPCIÓN
         { id: "check-in", label: "Check-in", icon: "✅" },
         { id: "balance-payments", label: "Saldo y Pagos", icon: "💰" },
       ],
@@ -165,3 +161,4 @@ const UserMenu = ({ userInfo, onLogout }) => {
 };
 
 export default UserMenu;
+
