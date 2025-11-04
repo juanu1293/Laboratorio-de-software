@@ -342,15 +342,16 @@ const HomePage = () => {
       return;
     }
 
+    const departureDateSQL = new Date(departureDate)
+      .toISOString()
+      .split("T")[0];
     // Navegar a la página de resultados de búsqueda
     navigate("/search-flights", {
       state: {
         origin,
         destination,
-        departureDate: formatDisplayDate(departureDate),
-        returnDate:
-          tripType === "roundtrip" ? formatDisplayDate(returnDate) : null,
-        tripType,
+        departureDate,
+        departureDateSQL,
       },
     });
   };
