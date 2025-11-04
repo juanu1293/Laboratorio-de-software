@@ -13,17 +13,15 @@ const ManageFlights = () => {
 
   // Estados para el formulario de crear/editar vuelo
   const [flightForm, setFlightForm] = useState({
-    airline: "VivaSky Airlines",
-    flightNumber: "",
-    origin: "",
-    destination: "",
-    departureTime: "",
-    arrivalTime: "",
-    duration: "",
-    price: "",
-    stops: "Directo",
-    baggage: "15kg",
-    status: "Activo",
+    tipo_vuelo: "solo_ida",
+    origen: "",
+    destino: "",
+    fecha_salida: "",
+    hora_salida: "",
+    fecha_llegada: "",
+    hora_llegada: "",
+    costo_economico: "",
+    costo_vip: "",
   });
 
   // Lista de ciudades disponibles
@@ -55,6 +53,54 @@ const ManageFlights = () => {
     "Miami",
   ];
 
+  // 🔄 NUEVO: Función para guardar vuelo en localStorage
+  const saveFlightToLocalList = (flightData) => {
+    try {
+      // Obtener vuelos existentes
+      const existingFlights = JSON.parse(
+        localStorage.getItem("vivaSky_managedFlights") || "[]"
+      );
+
+      // Crear objeto simple para la lista
+      const newFlightForList = {
+        id: Date.now(),
+        flightNumber: `VS${flightData.id_vuelo || "NEW"}`,
+        route: `${flightData.origen} → ${flightData.destino}`,
+        schedule: `${flightData.hora_salida.substring(
+          0,
+          5
+        )} - ${calculateArrivalTime(flightData.hora_salida)}`,
+        price: Number(flightData.costo_economico),
+        status: "Activo",
+      };
+
+      // Agregar y guardar
+      const updatedFlights = [...existingFlights, newFlightForList];
+      localStorage.setItem(
+        "vivaSky_managedFlights",
+        JSON.stringify(updatedFlights)
+      );
+    } catch (error) {
+      console.error("Error guardando en lista local:", error);
+    }
+  };
+
+  // 🔄 NUEVO: Función auxiliar para calcular hora de llegada
+  const calculateArrivalTime = (departureTime) => {
+    if (!departureTime) return "10:00";
+    try {
+      const [hours, minutes] = departureTime.split(":").map(Number);
+      let totalMinutes = hours * 60 + minutes + 120;
+      const arrivalHours = Math.floor(totalMinutes / 60) % 24;
+      const arrivalMinutes = totalMinutes % 60;
+      return `${arrivalHours.toString().padStart(2, "0")}:${arrivalMinutes
+        .toString()
+        .padStart(2, "0")}`;
+    } catch {
+      return "10:00";
+    }
+  };
+
   // Verificar autenticación y permisos
   useEffect(() => {
     checkAuthAndPermissions();
@@ -73,11 +119,12 @@ const ManageFlights = () => {
         const user = JSON.parse(userData);
         const userRole = user.tipo_usuario || user.role || "Usuario";
 
-        // Verificar si es administrador
-        const adminRoles = ["Administrador", "administrador", "admin", "root"];
-        if (!adminRoles.includes(userRole)) {
+        // 🔒 SOLO Administrador puede acceder
+        const allowedRoles = ["Administrador", "administrador"];
+
+        if (!allowedRoles.includes(userRole)) {
           alert(
-            "⛔ Acceso denegado. Solo los administradores pueden acceder a esta página."
+            `⛔ Acceso denegado. \n\nSolo los usuarios con rol "Administrador" pueden acceder a la gestión de vuelos.\n\nTu rol actual: ${userRole}`
           );
           navigate("/");
           return;
@@ -99,53 +146,56 @@ const ManageFlights = () => {
     }
   };
 
+  // 🔄 MODIFICADO: Cargar vuelos del localStorage o usar ejemplos
   const loadSampleFlights = () => {
-    // Datos de ejemplo para vuelos
-    const sampleFlights = [
-      {
-        id: 1,
-        airline: "VivaSky Airlines",
-        flightNumber: "VS202",
-        origin: "Bogotá",
-        destination: "Medellín",
-        departureTime: "08:00",
-        arrivalTime: "08:45",
-        duration: "45m",
-        price: 350000,
-        stops: "Directo",
-        baggage: "15kg",
-        status: "Activo",
-      },
-      {
-        id: 2,
-        airline: "VivaSky Airlines",
-        flightNumber: "VS455",
-        origin: "Bogotá",
-        destination: "Cartagena",
-        departureTime: "14:20",
-        arrivalTime: "15:45",
-        duration: "1h 25m",
-        price: 420000,
-        stops: "Directo",
-        baggage: "15kg",
-        status: "Activo",
-      },
-      {
-        id: 3,
-        airline: "VivaSky Airlines",
-        flightNumber: "VS789",
-        origin: "Medellín",
-        destination: "Cali",
-        departureTime: "11:30",
-        arrivalTime: "12:20",
-        duration: "50m",
-        price: 380000,
-        stops: "Directo",
-        baggage: "15kg",
-        status: "Inactivo",
-      },
-    ];
-    setFlights(sampleFlights);
+    try {
+      // Intentar cargar vuelos guardados
+      const savedFlights = localStorage.getItem("vivaSky_managedFlights");
+      if (savedFlights) {
+        setFlights(JSON.parse(savedFlights));
+      } else {
+        // Si no hay guardados, usar los de ejemplo
+        setFlights([
+          {
+            id: 1,
+            flightNumber: "VS202",
+            route: "Bogotá → Medellín",
+            schedule: "08:00 - 08:45",
+            price: 350000,
+            status: "Activo",
+          },
+          {
+            id: 2,
+            flightNumber: "VS455",
+            route: "Bogotá → Cartagena",
+            schedule: "14:20 - 15:45",
+            price: 420000,
+            status: "Activo",
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error cargando vuelos:", error);
+      // En caso de error, cargar ejemplos
+      setFlights([
+        {
+          id: 1,
+          flightNumber: "VS202",
+          route: "Bogotá → Medellín",
+          schedule: "08:00 - 08:45",
+          price: 350000,
+          status: "Activo",
+        },
+        {
+          id: 2,
+          flightNumber: "VS455",
+          route: "Bogotá → Cartagena",
+          schedule: "14:20 - 15:45",
+          price: 420000,
+          status: "Activo",
+        },
+      ]);
+    }
   };
 
   const handleLogout = () => {
@@ -279,9 +329,12 @@ const ManageFlights = () => {
 
     // Validaciones básicas
     if (
-      !flightForm.flightNumber ||
-      !flightForm.origin ||
-      !flightForm.destination
+      !flightForm.origen ||
+      !flightForm.destino ||
+      !flightForm.fecha_salida ||
+      !flightForm.hora_salida ||
+      !flightForm.costo_economico ||
+      !flightForm.costo_vip
     ) {
       alert("Por favor completa todos los campos obligatorios");
       return;
@@ -296,8 +349,8 @@ const ManageFlights = () => {
     if (editingFlight) {
       // Editar vuelo existente
       setFlights((prev) =>
-        prev.map((flight) =>
-          flight.id === editingFlight.id ? newFlight : flight
+        prev.map((flights) =>
+          flights.id === editingFlight.id ? newFlight : flights
         )
       );
       alert("✅ Vuelo actualizado exitosamente");
@@ -324,41 +377,72 @@ const ManageFlights = () => {
     setEditingFlight(null);
   };
 
-  const handleEditFlight = (flight) => {
-    setEditingFlight(flight);
+  const handleEditFlight = (flights) => {
+    setEditingFlight(flights);
     setFlightForm({
-      airline: flight.airline,
-      flightNumber: flight.flightNumber,
-      origin: flight.origin,
-      destination: flight.destination,
-      departureTime: flight.departureTime,
-      arrivalTime: flight.arrivalTime,
-      duration: flight.duration,
-      price: flight.price.toString(),
-      stops: flight.stops,
-      baggage: flight.baggage,
-      status: flight.status,
+      airline: flights.airline,
+      flightNumber: flights.flightNumber,
+      origin: flights.origin,
+      destination: flights.destination,
+      departureTime: flights.departureTime,
+      arrivalTime: flights.arrivalTime,
+      duration: flights.duration,
+      price: flights.price.toString(),
+      stops: flights.stops,
+      baggage: flights.baggage,
+      status: flights.status,
     });
     setActiveTab("create");
   };
 
+  // 🔄 MODIFICADO: Eliminar vuelo también del localStorage
   const handleDeleteFlight = (flightId) => {
     if (window.confirm("¿Estás seguro de que quieres eliminar este vuelo?")) {
-      setFlights((prev) => prev.filter((flight) => flight.id !== flightId));
+      const updatedFlights = flights.filter((flight) => flight.id !== flightId);
+      setFlights(updatedFlights);
+      // Guardar en localStorage también
+      localStorage.setItem(
+        "vivaSky_managedFlights",
+        JSON.stringify(updatedFlights)
+      );
       alert("✅ Vuelo eliminado exitosamente");
     }
   };
 
+  // 🔄 MODIFICADO: Cambiar estado también en localStorage
   const handleToggleStatus = (flightId) => {
-    setFlights((prev) =>
-      prev.map((flight) =>
-        flight.id === flightId
-          ? {
-              ...flight,
-              status: flight.status === "Activo" ? "Inactivo" : "Activo",
-            }
-          : flight
-      )
+    const updatedFlights = flights.map((flight) =>
+      flight.id === flightId
+        ? {
+            ...flight,
+            status: flight.status === "Activo" ? "Inactivo" : "Activo",
+          }
+        : flight
+    );
+    setFlights(updatedFlights);
+    // Guardar en localStorage también
+    localStorage.setItem(
+      "vivaSky_managedFlights",
+      JSON.stringify(updatedFlights)
+    );
+    // 🔥 GUARDAR ESTADO EN LOCALSTORAGE SEPARADO
+    const flightStatusMap = JSON.parse(
+      localStorage.getItem("vivaSky_flightStatus") || "{}"
+    );
+    flightStatusMap[flightId] = updatedFlights.find(
+      (f) => f.id === flightId
+    ).status;
+    localStorage.setItem(
+      "vivaSky_flightStatus",
+      JSON.stringify(flightStatusMap)
+    );
+
+    alert(
+      `✅ Vuelo ${
+        updatedFlights.find((f) => f.id === flightId).status === "Activo"
+          ? "activado"
+          : "desactivado"
+      } exitosamente`
     );
   };
 
@@ -509,7 +593,6 @@ const ManageFlights = () => {
                       <th>Vuelo</th>
                       <th>Ruta</th>
                       <th>Horario</th>
-                      <th>Duración</th>
                       <th>Precio</th>
                       <th>Estado</th>
                       <th>Acciones</th>
@@ -528,30 +611,15 @@ const ManageFlights = () => {
                             <div className="flight-number">
                               {flight.flightNumber}
                             </div>
-                            <div className="airline-name">{flight.airline}</div>
                           </div>
                         </td>
                         <td>
                           <div className="route-info-cell">
-                            <div className="route">
-                              <span className="city">{flight.origin}</span>
-                              <span className="arrow">→</span>
-                              <span className="city">{flight.destination}</span>
-                            </div>
-                            <div className="flight-details">
-                              {flight.stops} • {flight.baggage}
-                            </div>
+                            <div className="route">{flight.route}</div>
                           </div>
                         </td>
                         <td>
-                          <div className="time-info-cell">
-                            <div className="time">{flight.departureTime}</div>
-                            <div className="time-separator">-</div>
-                            <div className="time">{flight.arrivalTime}</div>
-                          </div>
-                        </td>
-                        <td>
-                          <div className="duration-cell">{flight.duration}</div>
+                          <div className="schedule-cell">{flight.schedule}</div>
                         </td>
                         <td>
                           <div className="price-cell">
@@ -627,39 +695,137 @@ const ManageFlights = () => {
                 </p>
               </div>
 
-              <form className="flight-form" onSubmit={handleCreateFlight}>
+              <form
+                className="flight-form"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+
+                  // Validación básica
+                  if (
+                    !flightForm.origen ||
+                    !flightForm.destino ||
+                    !flightForm.fecha_salida ||
+                    !flightForm.hora_salida ||
+                    !flightForm.costo_economico ||
+                    !flightForm.costo_vip
+                  ) {
+                    alert(
+                      "⚠️ Por favor completa todos los campos obligatorios."
+                    );
+                    return;
+                  }
+
+                  // Si el vuelo es ida y vuelta, validar también los campos de regreso
+                  if (
+                    flightForm.tipo_vuelo === "ida_y_vuelta" &&
+                    (!flightForm.fecha_llegada || !flightForm.hora_llegada)
+                  ) {
+                    alert(
+                      "⚠️ Debes ingresar la fecha y hora de regreso para un vuelo ida y vuelta."
+                    );
+                    return;
+                  }
+
+                  try {
+                    const response = await fetch(
+                      "http://localhost:5000/api/flights",
+                      {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization:
+                            "Bearer " +
+                            (localStorage.getItem("authToken") ||
+                              sessionStorage.getItem("authToken")),
+                        },
+                        body: JSON.stringify({
+                          origen: flightForm.origen,
+                          destino: flightForm.destino,
+                          fecha_salida: flightForm.fecha_salida,
+                          hora_salida: flightForm.hora_salida,
+                          // Si es solo ida, enviamos las mismas fecha/hora de salida como placeholders
+                          fecha_llegada:
+                            flightForm.tipo_vuelo === "solo_ida"
+                              ? flightForm.fecha_salida
+                              : flightForm.fecha_llegada,
+                          hora_llegada:
+                            flightForm.tipo_vuelo === "solo_ida"
+                              ? flightForm.hora_salida
+                              : flightForm.hora_llegada,
+                          costo_economico: Number(flightForm.costo_economico),
+                          costo_vip: Number(flightForm.costo_vip),
+                          tipo_vuelo: flightForm.tipo_vuelo,
+                        }),
+                      }
+                    );
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                      alert(
+                        "❌ Error: " +
+                          (data.mensaje || "No se pudo crear el vuelo")
+                      );
+                      return;
+                    }
+
+                    alert("✅ Vuelo creado exitosamente");
+
+                    // 🔄 NUEVO: Guardar en la lista local también
+                    saveFlightToLocalList({
+                      id_vuelo: data.id_vuelo,
+                      origen: flightForm.origen,
+                      destino: flightForm.destino,
+                      hora_salida: flightForm.hora_salida,
+                      costo_economico: flightForm.costo_economico,
+                    });
+
+                    // Recargar la lista de vuelos
+                    loadSampleFlights();
+
+                    setFlightForm({
+                      tipo_vuelo: "solo_ida",
+                      origen: "",
+                      destino: "",
+                      fecha_salida: "",
+                      hora_salida: "",
+                      fecha_llegada: "",
+                      hora_llegada: "",
+                      costo_economico: "",
+                      costo_vip: "",
+                    });
+
+                    // Cambiar a la pestaña de ver vuelos
+                    setActiveTab("view");
+                  } catch (error) {
+                    console.error("Error al crear vuelo:", error);
+                    alert("❌ Error al conectar con el servidor");
+                  }
+                }}
+              >
                 <div className="form-grid">
+                  {/* Tipo de vuelo */}
                   <div className="form-group">
-                    <label htmlFor="flightNumber">Número de Vuelo *</label>
-                    <input
-                      type="text"
-                      id="flightNumber"
-                      name="flightNumber"
-                      value={flightForm.flightNumber}
-                      onChange={handleInputChange}
-                      placeholder="Ej: VS202"
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="airline">Aerolínea</label>
-                    <input
-                      type="text"
-                      id="airline"
-                      name="airline"
-                      value={flightForm.airline}
-                      onChange={handleInputChange}
-                      placeholder="Nombre de la aerolínea"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="origin">Origen *</label>
+                    <label htmlFor="tipo_vuelo">Tipo de vuelo *</label>
                     <select
-                      id="origin"
-                      name="origin"
-                      value={flightForm.origin}
+                      id="tipo_vuelo"
+                      name="tipo_vuelo"
+                      value={flightForm.tipo_vuelo}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="solo_ida">Solo ida</option>
+                      <option value="ida_y_vuelta">Ida y vuelta</option>
+                    </select>
+                  </div>
+
+                  {/* Origen y destino */}
+                  <div className="form-group">
+                    <label htmlFor="origen">Origen *</label>
+                    <select
+                      id="origen"
+                      name="origen"
+                      value={flightForm.origen}
                       onChange={handleInputChange}
                       required
                     >
@@ -673,11 +839,11 @@ const ManageFlights = () => {
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="destination">Destino *</label>
+                    <label htmlFor="destino">Destino *</label>
                     <select
-                      id="destination"
-                      name="destination"
-                      value={flightForm.destination}
+                      id="destino"
+                      name="destino"
+                      value={flightForm.destino}
                       onChange={handleInputChange}
                       required
                     >
@@ -690,128 +856,96 @@ const ManageFlights = () => {
                     </select>
                   </div>
 
+                  {/* Fecha y hora de salida */}
                   <div className="form-group">
-                    <label htmlFor="departureTime">Hora de Salida *</label>
+                    <label htmlFor="fecha_salida">Fecha de salida *</label>
+                    <input
+                      type="date"
+                      id="fecha_salida"
+                      name="fecha_salida"
+                      value={flightForm.fecha_salida}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="hora_salida">Hora de salida *</label>
                     <input
                       type="time"
-                      id="departureTime"
-                      name="departureTime"
-                      value={flightForm.departureTime}
+                      id="hora_salida"
+                      name="hora_salida"
+                      value={flightForm.hora_salida}
                       onChange={handleInputChange}
                       required
                     />
                   </div>
 
-                  <div className="form-group">
-                    <label htmlFor="arrivalTime">Hora de Llegada *</label>
-                    <input
-                      type="time"
-                      id="arrivalTime"
-                      name="arrivalTime"
-                      value={flightForm.arrivalTime}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
+                  {/* Solo mostrar si es ida y vuelta */}
+                  {flightForm.tipo_vuelo === "ida_y_vuelta" && (
+                    <>
+                      <div className="form-group">
+                        <label htmlFor="fecha_llegada">
+                          Fecha de regreso *
+                        </label>
+                        <input
+                          type="date"
+                          id="fecha_llegada"
+                          name="fecha_llegada"
+                          value={flightForm.fecha_llegada}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
 
-                  <div className="form-group">
-                    <label htmlFor="duration">Duración *</label>
-                    <input
-                      type="text"
-                      id="duration"
-                      name="duration"
-                      value={flightForm.duration}
-                      onChange={handleInputChange}
-                      placeholder="Ej: 1h 30m"
-                      required
-                    />
-                  </div>
+                      <div className="form-group">
+                        <label htmlFor="hora_llegada">Hora de regreso *</label>
+                        <input
+                          type="time"
+                          id="hora_llegada"
+                          name="hora_llegada"
+                          value={flightForm.hora_llegada}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                    </>
+                  )}
 
+                  {/* Costos */}
                   <div className="form-group">
-                    <label htmlFor="price">Precio (COP) *</label>
+                    <label htmlFor="costo_economico">
+                      Costo Económico (COP) *
+                    </label>
                     <input
                       type="number"
-                      id="price"
-                      name="price"
-                      value={flightForm.price}
+                      id="costo_economico"
+                      name="costo_economico"
+                      value={flightForm.costo_economico}
                       onChange={handleInputChange}
-                      placeholder="Ej: 350000"
                       min="0"
                       required
                     />
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="stops">Escalas</label>
-                    <select
-                      id="stops"
-                      name="stops"
-                      value={flightForm.stops}
+                    <label htmlFor="costo_vip">Costo VIP (COP) *</label>
+                    <input
+                      type="number"
+                      id="costo_vip"
+                      name="costo_vip"
+                      value={flightForm.costo_vip}
                       onChange={handleInputChange}
-                    >
-                      <option value="Directo">Directo</option>
-                      <option value="1 escala">1 escala</option>
-                      <option value="2 escalas">2 escalas</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="baggage">Equipaje</label>
-                    <select
-                      id="baggage"
-                      name="baggage"
-                      value={flightForm.baggage}
-                      onChange={handleInputChange}
-                    >
-                      <option value="15kg">15kg</option>
-                      <option value="23kg">23kg</option>
-                      <option value="30kg">30kg</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="status">Estado</label>
-                    <select
-                      id="status"
-                      name="status"
-                      value={flightForm.status}
-                      onChange={handleInputChange}
-                    >
-                      <option value="Activo">Activo</option>
-                      <option value="Inactivo">Inactivo</option>
-                    </select>
+                      min="0"
+                      required
+                    />
                   </div>
                 </div>
 
                 <div className="form-actions">
                   <button type="submit" className="submit-btn primary">
-                    {editingFlight ? "💾 Actualizar Vuelo" : "✈️ Crear Vuelo"}
+                    ✈️ Crear Vuelo
                   </button>
-
-                  {editingFlight && (
-                    <button
-                      type="button"
-                      className="submit-btn secondary"
-                      onClick={() => {
-                        setEditingFlight(null);
-                        setFlightForm({
-                          airline: "VivaSky Airlines",
-                          flightNumber: "",
-                          origin: "",
-                          destination: "",
-                          departureTime: "",
-                          arrivalTime: "",
-                          duration: "",
-                          price: "",
-                          stops: "Directo",
-                          baggage: "15kg",
-                          status: "Activo",
-                        });
-                      }}
-                    >
-                      ❌ Cancelar Edición
-                    </button>
-                  )}
                 </div>
               </form>
             </div>
@@ -858,7 +992,10 @@ const ManageFlights = () => {
                   <div className="stat-icon">🌎</div>
                   <div className="stat-content">
                     <div className="stat-number">
-                      {new Set(flights.map((f) => f.origin)).size}
+                      {
+                        new Set(flights.map((f) => f.route.split(" → ")[0]))
+                          .size
+                      }
                     </div>
                     <div className="stat-label">Ciudades de Origen</div>
                   </div>
@@ -868,21 +1005,13 @@ const ManageFlights = () => {
               <div className="routes-stats">
                 <h3>Rutas Más Populares</h3>
                 <div className="routes-list">
-                  {[
-                    ...new Set(
-                      flights.map((f) => `${f.origin} - ${f.destination}`)
-                    ),
-                  ]
+                  {[...new Set(flights.map((f) => f.route))]
                     .slice(0, 5)
                     .map((route) => (
                       <div key={route} className="route-item">
                         <span className="route-name">{route}</span>
                         <span className="route-count">
-                          {
-                            flights.filter(
-                              (f) => `${f.origin} - ${f.destination}` === route
-                            ).length
-                          }{" "}
+                          {flights.filter((f) => f.route === route).length}{" "}
                           vuelos
                         </span>
                       </div>
