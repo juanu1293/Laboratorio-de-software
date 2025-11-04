@@ -130,7 +130,6 @@ const Register = () => {
   };
 
   const validateForm = () => {
-    // Lista de campos obligatorios de texto
     const requiredFields = [
       "document",
       "firstName",
@@ -157,11 +156,46 @@ const Register = () => {
       }
     }
 
+    // 🔒 Validaciones de seguridad y formato
+    const nameRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ]{2,}[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/; // Empieza con 2 letras
+    const numberRegex = /^\d+$/; // Solo números
+    const sqlInjectionRegex = /['"=;(){}<>]/; // Previene intentos simples de inyección SQL
+
+    // Campos de texto
+    if (!nameRegex.test(formData.firstName)) {
+      setError("El nombre debe empezar con al menos 2 letras y solo contener letras o espacios");
+      return false;
+    }
+
+    if (!nameRegex.test(formData.lastName)) {
+      setError("El apellido debe empezar con al menos 2 letras y solo contener letras o espacios");
+      return false;
+    }
+
+    if (sqlInjectionRegex.test(formData.firstName) || sqlInjectionRegex.test(formData.lastName) ||
+        sqlInjectionRegex.test(formData.billingAddress) || sqlInjectionRegex.test(formData.email)) {
+      setError("Entrada inválida detectada. Por favor evita caracteres no permitidos (', \", =, ;, <, >, etc.)");
+      return false;
+    }
+
+    // Documento y teléfono
+    if (!numberRegex.test(formData.document)) {
+      setError("El documento debe contener solo números");
+      return false;
+    }
+
+    if (!numberRegex.test(formData.phone)) {
+      setError("El teléfono debe contener solo números");
+      return false;
+    }
+
+    // Correo
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
       setError("Por favor ingresa un email válido");
       return false;
     }
 
+    // Contraseñas
     if (formData.password.length < 6) {
       setError("La contraseña debe tener al menos 6 caracteres");
       return false;
@@ -172,16 +206,7 @@ const Register = () => {
       return false;
     }
 
-    if (!/^\d+$/.test(formData.phone)) {
-      setError("El teléfono debe contener solo números");
-      return false;
-    }
-
-    if (!formData.acceptTerms) {
-      setError("Debes aceptar los términos y condiciones");
-      return false;
-    }
-
+    // Fecha
     const birthDate = new Date(formData.birthDate);
     const today = new Date();
     if (birthDate >= today) {
@@ -189,8 +214,15 @@ const Register = () => {
       return false;
     }
 
+    // Aceptar términos
+    if (!formData.acceptTerms) {
+      setError("Debes aceptar los términos y condiciones");
+      return false;
+    }
+
     return true;
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -98,32 +98,65 @@ const EditProfile = () => {
   };
 
   const validateForm = () => {
-    // Validar campos obligatorios y que no sean solo espacios
     if (
       !formData.documento ||
       !formData.nombre ||
       !formData.apellido ||
       !formData.telefono ||
-      !formData.email ||
-      !formData.direccion ||
-      (typeof formData.documento === "string" && formData.documento.trim() === "") ||
-      (typeof formData.nombre === "string" && formData.nombre.trim() === "") ||
-      (typeof formData.apellido === "string" && formData.apellido.trim() === "") ||
-      (typeof formData.telefono === "string" && formData.telefono.trim() === "") ||
-      (typeof formData.email === "string" && formData.email.trim() === "") ||
-      (typeof formData.direccion === "string" && formData.direccion.trim() === "")
+      !formData.email
     ) {
-      setError("Por favor completa todos los campos obligatorios sin solo espacios");
+      setError("Por favor completa todos los campos obligatorios");
       return false;
     }
 
+    // 🔒 Validaciones de seguridad y formato
+    const nameRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ]{2,}[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/; // Empieza con 2 letras
+    const numberRegex = /^\d+$/; // Solo números
+    const sqlInjectionRegex = /['"=;(){}<>]/; // Caracteres no permitidos
+
+    // Campos de texto
+    if (!nameRegex.test(formData.nombre)) {
+      setError("El nombre debe empezar con al menos 2 letras y solo contener letras o espacios");
+      return false;
+    }
+
+    if (!nameRegex.test(formData.apellido)) {
+      setError("El apellido debe empezar con al menos 2 letras y solo contener letras o espacios");
+      return false;
+    }
+
+    if (formData.direccion && !/^[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s#.,-]*$/.test(formData.direccion)) {
+      setError("La dirección contiene caracteres no permitidos");
+      return false;
+    }
+
+    // Campos numéricos
+    if (!numberRegex.test(formData.documento)) {
+      setError("El documento debe contener solo números");
+      return false;
+    }
+
+    if (!numberRegex.test(formData.telefono)) {
+      setError("El teléfono debe contener solo números");
+      return false;
+    }
+
+    // Correo electrónico
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
       setError("Por favor ingresa un email válido");
       return false;
     }
 
-    if (!/^\d+$/.test(formData.telefono)) {
-      setError("El teléfono debe contener solo números");
+    // Detección de caracteres peligrosos (inyecciones)
+    const fieldsToCheck = [
+      formData.nombre,
+      formData.apellido,
+      formData.email,
+      formData.direccion || "",
+    ];
+
+    if (fieldsToCheck.some((value) => sqlInjectionRegex.test(value))) {
+      setError("Entrada inválida detectada. Evita caracteres como ', \", =, ;, <, >, etc.");
       return false;
     }
 

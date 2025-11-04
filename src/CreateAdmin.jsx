@@ -31,25 +31,31 @@ const CreateAdmin = () => {
   };
 
   const validateForm = () => {
-    if (
-      !formData.email ||
-      !formData.password ||
-      !formData.confirmPassword ||
-      (typeof formData.email === "string" && formData.email.trim() === "") ||
-      (typeof formData.password === "string" && formData.password.trim() === "") ||
-      (typeof formData.confirmPassword === "string" && formData.confirmPassword.trim() === "")
-    ) {
-      setError("Por favor completa todos los campos sin solo espacios");
+    if (!formData.email || !formData.password || !formData.confirmPassword) {
+      setError("Por favor completa todos los campos");
       return false;
     }
 
+    // 🔒 Validación de correo e inyección
+    const sqlInjectionRegex = /['"=;(){}<>]/;
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
       setError("Por favor ingresa un email válido");
       return false;
     }
 
+    if (sqlInjectionRegex.test(formData.email)) {
+      setError("Correo inválido. Evita caracteres como ', \", =, ;, <, >, etc.");
+      return false;
+    }
+
+    // Contraseña
     if (formData.password.length < 6) {
       setError("La contraseña debe tener al menos 6 caracteres");
+      return false;
+    }
+
+    if (sqlInjectionRegex.test(formData.password)) {
+      setError("La contraseña contiene caracteres no permitidos");
       return false;
     }
 

@@ -71,43 +71,59 @@ const CompleteAdminInfo = () => {
   };
 
   const validateForm = () => {
-    // Validar información personal
+    // Campos obligatorios
     if (
       !formData.documento ||
       !formData.nombre ||
       !formData.apellido ||
-      !formData.telefono ||
-      (typeof formData.documento === "string" && formData.documento.trim() === "") ||
-      (typeof formData.nombre === "string" && formData.nombre.trim() === "") ||
-      (typeof formData.apellido === "string" && formData.apellido.trim() === "") ||
-      (typeof formData.telefono === "string" && formData.telefono.trim() === "")
+      !formData.telefono
     ) {
-      setError("Por favor completa toda tu información personal sin solo espacios");
+      setError("Por favor completa toda tu información personal");
       return false;
     }
 
-    // Validar que el documento solo contenga números
-    if (!/^\d+$/.test(formData.documento)) {
+    // 🔒 Expresiones regulares de validación
+    const nameRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ]{2,}[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/; // mínimo 2 letras
+    const numberRegex = /^\d+$/;
+    const sqlInjectionRegex = /['"=;(){}<>]/;
+
+    // Nombres y apellidos
+    if (!nameRegex.test(formData.nombre)) {
+      setError("El nombre debe empezar con al menos 2 letras y solo contener letras o espacios");
+      return false;
+    }
+
+    if (!nameRegex.test(formData.apellido)) {
+      setError("El apellido debe empezar con al menos 2 letras y solo contener letras o espacios");
+      return false;
+    }
+
+    // Documento y teléfono
+    if (!numberRegex.test(formData.documento)) {
       setError("El documento debe contener solo números");
       return false;
     }
 
-    // Validar que el teléfono solo contenga números
-    if (!/^\d+$/.test(formData.telefono)) {
+    if (!numberRegex.test(formData.telefono)) {
       setError("El teléfono debe contener solo números");
       return false;
     }
 
-    // Validar contraseñas (solo si se ingresaron)
-    if (formData.password || formData.confirmPassword) {
-      if (
-        (typeof formData.password === "string" && formData.password.trim() === "") ||
-        (typeof formData.confirmPassword === "string" && formData.confirmPassword.trim() === "")
-      ) {
-        setError("La contraseña no puede ser solo espacios");
-        return false;
-      }
+    // Detección de caracteres maliciosos
+    const fieldsToCheck = [
+      formData.nombre,
+      formData.apellido,
+      formData.documento,
+      formData.telefono,
+    ];
 
+    if (fieldsToCheck.some((value) => sqlInjectionRegex.test(value))) {
+      setError("Entrada inválida detectada. Evita caracteres como ', \", =, ;, <, >, etc.");
+      return false;
+    }
+
+    // Contraseñas (si se ingresan)
+    if (formData.password || formData.confirmPassword) {
       if (formData.password.length < 6) {
         setError("La contraseña debe tener al menos 6 caracteres");
         return false;
