@@ -1,70 +1,88 @@
-// controllers/flightController.js
-const Flight = require("../models/flightModel");
+const db = require("../db");
 const { getDuration } = require("../utils/flightDurations");
 
-const intlCities = ["Madrid", "Londres", "New york", "Buenos aires", "Miami"];
-const intlGateways = ["Pereira", "Bogota", "Medellin", "Cali", "Cartagena"];
+exports.createFlight = async (req, res) => {
+  const {
+    origen,
+    destino,
+    fecha_salida,
+    hora_salida,
+    fecha_llegada,
+    hora_llegada,
+    costo_economico,
+    costo_vip,
+    tipo_vuelo,
+  } = req.body;
 
-exports.createFlight = (req, res) => {
+  // Validación de campos obligatorios
+  if (
+    !origen ||
+    !destino ||
+    !fecha_salida ||
+    !hora_salida ||
+    !costo_economico ||
+    !costo_vip ||
+    !tipo_vuelo
+  ) {
+    return res.status(400).json({ mensaje: "Faltan campos obligatorios" });
+  }
+
+  // ✅ Obtener duración según origen y destino
+  const duracion = getDuration(origen, destino);
+
+  if (!duracion) {
+    return res.status(400).json({
+      mensaje: `No se encontró duración para el vuelo ${origen} → ${destino}.`,
+    });
+  }
+
+  // Si es solo ida, usar la misma fecha/hora como llegada
+  const fechaLlegadaFinal =
+    tipo_vuelo === "solo_ida" ? fecha_salida : fecha_llegada;
+  const horaLlegadaFinal =
+    tipo_vuelo === "solo_ida" ? hora_salida : hora_llegada;
+
+  // Consulta SQL
+  const query = `
+    INSERT INTO usuario.vuelo (
+      origen, destino, fecha_salida, hora_salida,
+      fecha_llegada, hora_llegada,
+      costo_economico, costo_vip, tipo_vuelo,
+      estado, duracion
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'activo', $10)
+    RETURNING id_vuelo
+  `;
+
   try {
-    const {
+    const result = await db.query(query, [
       origen,
       destino,
       fecha_salida,
       hora_salida,
-      fecha_llegada,
-      hora_llegada,
+      fechaLlegadaFinal,
+      horaLlegadaFinal,
       costo_economico,
-      costo_vip
-    } = req.body;
-
-    // Validación básica
-    if (!origen || !destino || !fecha_salida || !hora_salida || !fecha_llegada || !hora_llegada) {
-      return res.status(400).json({ mensaje: "Faltan campos obligatorios" });
-    }
-
-    const duracion = getDuration(origen, destino);
-    if (!duracion) return res.status(400).json({ mensaje: "Ruta no válida o no definida" });
-
-
-    // Determinar tipo de vuelo
-    const tipo_vuelo =
-      intlCities.includes(origen) || intlCities.includes(destino)
-        ? "internacional"
-        : "nacional";
-
-    // Validación de rutas internacionales
-    if (tipo_vuelo === "internacional") {
-      if (intlCities.includes(destino) && !intlGateways.includes(origen))
-        return res.status(400).json({ mensaje: "Solo se puede salir al exterior desde ciudades principales" });
-
-      if (intlCities.includes(origen) && !intlGateways.includes(destino))
-        return res.status(400).json({ mensaje: "Los vuelos internacionales solo pueden llegar a ciudades colombianas principales" });
-    }
-
-    const data = {
-      fecha_salida,
-      hora_salida,
-      fecha_llegada,
-      hora_llegada,
-      origen,
-      destino,
-      duracion,
       costo_vip,
-      costo_economico,
-      estado: "programado",
       tipo_vuelo,
-    };
+      duracion, // ✅ duración calculada
+    ]);
 
-    Flight.create(data, (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ mensaje: "Error al crear vuelo" });
-      }
-      res.status(201).json({ mensaje: "Vuelo creado exitosamente", id: result.insertId });
+    res.status(201).json({
+      mensaje: "✅ Vuelo creado correctamente",
+      id_vuelo: result.rows[0].id_vuelo,
+      duracion,
     });
   } catch (error) {
-    console.error(error);
+    console.error("❌ Error al insertar vuelo:", error.message);
+    res.status(500).json({
+      mensaje: "Error al crear vuelo",
+      error: error.message,
+    });
+  }
+};
+
     res.status(500).json({ mensaje: "Error interno del servidor" });
   }
 };
+
