@@ -159,7 +159,7 @@ const Cart = () => {
   };
 
   const handleContinueShopping = () => {
-    setShowSearchModal(true);
+    navigate("/");
   };
 
   const removeFromCart = (flightId) => {
