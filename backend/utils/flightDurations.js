@@ -564,10 +564,17 @@ const durations = {
   "Cartagena-Buenos Aires": "08:08",
 };
 
-function getDuration(origen, destino) {
-  const key1 = `${origen}-${destino}`;
-  const key2 = `${destino}-${origen}`;
-  return durations[key1] || durations[key2] || null;
+function normalizeCity(name) {
+  if (!name) return "";
+  return name
+    .normalize("NFD") // separa letras y tildes
+    .replace(/[\u0300-\u036f]/g, "") // elimina tildes
+    .trim();
 }
 
+function getDuration(origen, destino) {
+  const key1 = `${normalizeCity(origen)}-${normalizeCity(destino)}`;
+  const key2 = `${normalizeCity(destino)}-${normalizeCity(origen)}`;
+  return durations[key1] || durations[key2] || null;
+}
 module.exports = { getDuration };
