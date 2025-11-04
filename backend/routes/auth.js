@@ -28,4 +28,3 @@ router.post("/create-admin", verifyToken, createAdminController);
 router.get("/me", verifyToken, getCurrentUser);
 
 module.exports = router;
-
