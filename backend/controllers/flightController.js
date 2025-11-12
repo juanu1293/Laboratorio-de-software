@@ -82,7 +82,4 @@ exports.createFlight = async (req, res) => {
   }
 };
 
-    res.status(500).json({ mensaje: "Error interno del servidor" });
-  }
-};
 
