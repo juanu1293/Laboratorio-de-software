@@ -68,6 +68,40 @@ exports.createFlight = async (req, res) => {
       duracion, // ✅ duración calculada
     ]);
 
+    // ======================================================
+    //  🔹 CREAR ASIENTOS AUTOMÁTICAMENTE CUANDO SE CREA EL VUELO
+    // ======================================================
+    const idVuelo = result.rows[0].id_vuelo;
+
+    // Lista de ciudades internacionales
+    const internacionales = ["madrid", "londres", "new york", "buenos aires", "miami"];
+
+    // Detectar si el vuelo es internacional
+    const esInternacional =
+      internacionales.includes(origen.toLowerCase()) ||
+      internacionales.includes(destino.toLowerCase());
+
+    // Definir número de asientos
+    const totalAsientos = esInternacional ? 250 : 150;
+    const primeraClaseLimite = esInternacional ? 50 : 25;
+
+    // Crear asientos con número tipo VARCHAR(5)
+    for (let i = 1; i <= totalAsientos; i++) {
+      const clase = i <= primeraClaseLimite ? "primera clase" : "clase economica";
+
+      // Genera string de 5 caracteres: 1 → "00001"
+      const numeroAsiento = String(i).padStart(5, "0");
+
+      await db.query(
+        `INSERT INTO usuario.asiento (idvuelo, numeroasiento, clase, estado)
+        VALUES ($1, $2, $3, 'disponible')`,
+        [idVuelo, numeroAsiento, clase]
+      );
+    }
+
+    console.log(`🪑 ${totalAsientos} asientos creados para el vuelo ${idVuelo}`);
+
+
     res.status(201).json({
       mensaje: "✅ Vuelo creado correctamente",
       id_vuelo: result.rows[0].id_vuelo,
@@ -81,5 +115,6 @@ exports.createFlight = async (req, res) => {
     });
   }
 };
+
 
 
