@@ -1,0 +1,320 @@
+/* ========================================= */
+/* 🔹 ESTILOS PARA LA PÁGINA DE SALDO Y PAGOS 🔹 */
+/* ========================================= */
+
+.payments-page-container {
+  max-width: 1100px;
+  margin: 40px auto;
+  padding: 20px;
+  min-height: 60vh;
+}
+
+.payments-header {
+  text-align: center;
+  padding: 30px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  margin-bottom: 40px;
+}
+
+.payments-header h1 {
+  color: #023e8a;
+  margin-bottom: 10px;
+  font-size: 2.2rem;
+}
+
+.payments-header p {
+  font-size: 1.1rem;
+  color: #555;
+  margin-bottom: 25px;
+}
+
+.add-card-btn {
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #023e8a, #0077b6);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(2, 62, 138, 0.3);
+}
+
+.add-card-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(2, 62, 138, 0.4);
+}
+
+.add-card-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.add-card-btn .icon-add {
+  margin-right: 8px;
+  font-weight: bold;
+}
+
+/* Grid de tarjetas */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 25px;
+}
+
+.payment-card {
+  background: linear-gradient(145deg, #ffffff, #f4f7fa);
+  border-radius: 16px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e9ecef;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.payment-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 25px;
+  background: #f8f9fa;
+}
+
+.card-type {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #023e8a;
+}
+
+.card-icon {
+  font-size: 1.5rem;
+  color: #023e8a;
+}
+
+.card-body {
+  padding: 25px;
+  text-align: center;
+  flex-grow: 1;
+}
+
+.card-number {
+  font-size: 1.2rem;
+  color: #666;
+  margin-bottom: 20px;
+  letter-spacing: 2px;
+}
+
+.card-balance-label {
+  font-size: 0.9rem;
+  color: #555;
+  margin-bottom: 5px;
+}
+
+.card-balance {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1a237e;
+  line-height: 1.2;
+}
+
+.card-footer {
+  padding: 20px 25px;
+  background: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+}
+
+.recharge-btn {
+  width: 100%;
+  padding: 14px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.recharge-btn:hover:not(:disabled) {
+  background-color: #218838;
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.2);
+}
+
+.recharge-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* Mensaje de no tarjetas */
+.no-cards-message {
+  text-align: center;
+  padding: 60px 30px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.no-cards-icon {
+  font-size: 3.5rem;
+  color: #023e8a;
+  opacity: 0.8;
+  margin-bottom: 15px;
+  display: block;
+}
+
+.no-cards-message h3 {
+  font-size: 1.5rem;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.no-cards-message p {
+  font-size: 1rem;
+  color: #666;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* Estilos para Modales */
+.modal-form {
+  max-width: 500px;
+  width: 100%;
+}
+
+.modal-subtitle {
+  text-align: center;
+  color: #666;
+  margin-bottom: 25px;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.modal-actions .cancel-btn {
+  background-color: #6c757d;
+}
+.modal-actions .cancel-btn:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.recharge-confirm-btn {
+  background-color: #28a745 !important;
+}
+.recharge-confirm-btn:hover:not(:disabled) {
+  background-color: #218838 !important;
+}
+
+.current-balance-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.current-balance-info span {
+  font-size: 1rem;
+  color: #555;
+  font-weight: 500;
+}
+
+.current-balance-info strong {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1a237e;
+}
+
+/* Estilo para poner campos lado a lado en el modal */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  width: 100%;
+}
+
+/* Ajuste para el input-group dentro de un form-row */
+.form-row .input-group {
+  margin-bottom: 0; /* Quitamos el margen inferior que ya tiene */
+}
+
+/* Estilo para el <select> en el formulario */
+.input-group select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  background-color: #fff;
+  transition: border-color 0.2s;
+  font-family: 'Poppins', sans-serif;
+}
+
+.input-group select:focus {
+  outline: none;
+  border-color: #0077b6;
+  box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.1);
+}
+
+/* Ajuste en el modal de login-container para que sea un poco más ancho */
+.modal-form {
+  max-width: 550px; /* Un poco más ancho para los nuevos campos */
+}
+
+/* Ajuste en la tarjeta para el banco */
+.card-header .card-type {
+  font-size: 1.2rem; /* Un poco más grande para el nombre del banco */
+  text-transform: capitalize;
+}
+
+/* Estilo para el nombre de la persona en la tarjeta */
+.card-name {
+  font-weight: bold;
+  color: #333;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Badge (Etiqueta) para el tipo de tarjeta */
+.card-type-badge {
+  font-size: 0.85rem;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Color específico para Crédito */
+.type-credit {
+  background-color: #e3f2fd; /* Azul muy claro */
+  color: #1565c0; /* Azul oscuro */
+  border: 1px solid #bbdefb;
+}
+
+/* Color específico para Débito */
+.type-debit {
+  background-color: #e8f5e9; /* Verde muy claro */
+  color: #2e7d32; /* Verde oscuro */
+  border: 1px solid #c8e6c9;
+}
