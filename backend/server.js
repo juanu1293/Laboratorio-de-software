@@ -34,6 +34,9 @@ app.use("/api/location", locationRoutes);
 const flightRoutes = require("./routes/flightRoutes");
 app.use("/api/flights", flightRoutes);
 
+const cardRoutes = require("./routes/cardRoutes");
+app.use("/api/cards", cardRoutes);  
+
 const searchFlightsRoutes = require("./routes/searchFlightRoutes");
 app.use("/api/search-flights", searchFlightsRoutes);
 
