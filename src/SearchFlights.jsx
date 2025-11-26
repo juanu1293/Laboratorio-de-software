@@ -15,6 +15,7 @@ function SearchFlights() {
   console.log("📅 Fecha salida SQL:", searchParams.departureDateSQL);
   console.log("📅 Fecha retorno:", searchParams.returnDate);
   console.log("🔄 Tipo viaje:", searchParams.tripType);
+  console.log("🔎 Tipo de búsqueda:", searchParams.searchType);
 
   const [flights, setFlights] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -22,6 +23,327 @@ function SearchFlights() {
   const [userName, setUserName] = useState("Usuario");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState("");
+
+  // 🔥 NUEVA FUNCIÓN: Filtrar vuelos por fecha vigente
+  const filterFlightsByDate = (flightsList) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalizar a inicio del día
+
+    console.log(
+      "📅 Filtrado por fecha vigente - Hoy:",
+      today.toISOString().split("T")[0]
+    );
+
+    return flightsList.filter((flight) => {
+      if (!flight.fecha_salida) return false;
+
+      try {
+        // Verificar vuelo de ida
+        const departureDate = new Date(flight.fecha_salida);
+        departureDate.setHours(0, 0, 0, 0);
+
+        const isDepartureValid = departureDate >= today;
+
+        // Verificar vuelo de retorno si existe
+        let isReturnValid = true;
+        if (flight.returnFlight && flight.returnFlight.fecha_salida) {
+          const returnDate = new Date(flight.returnFlight.fecha_salida);
+          returnDate.setHours(0, 0, 0, 0);
+          isReturnValid = returnDate >= today;
+        }
+
+        const isValid = isDepartureValid && isReturnValid;
+
+        if (!isValid) {
+          console.log("❌ Vuelo descartado por fecha:", {
+            id: flight.id_vuelo,
+            salida: flight.fecha_salida,
+            retorno: flight.returnFlight?.fecha_salida,
+            valido: isValid,
+          });
+        }
+
+        return isValid;
+      } catch (error) {
+        console.error("❌ Error filtrando vuelo por fecha:", error);
+        return false;
+      }
+    });
+  };
+
+  // 🔥 Mapa de zonas horarias (UTC offset en horas)
+  const timeZones = {
+    // Ciudades Colombianas (UTC-5)
+    Arauca: -5,
+    Armenia: -5,
+    Barranquilla: -5,
+    Bogotá: -5,
+    Bucaramanga: -5,
+    Cali: -5,
+    Cartagena: -5,
+    Cúcuta: -5,
+    Florencia: -5,
+    Ibagué: -5,
+    Leticia: -5,
+    Manizales: -5,
+    Medellín: -5,
+    Mitú: -5,
+    Mocoa: -5,
+    Montería: -5,
+    Neiva: -5,
+    Pasto: -5,
+    Pereira: -5,
+    Popayán: -5,
+    "Puerto Carreño": -5,
+    Quibdó: -5,
+    Riohacha: -5,
+    "San Andrés": -5,
+    "San José del Guaviare": -5,
+    "Santa Marta": -5,
+    Sincelejo: -5,
+    Tunja: -5,
+    Valledupar: -5,
+    Villavicencio: -5,
+    Yopal: -5,
+
+    // Ciudades Internacionales
+    "Buenos Aires": -3, // Argentina (UTC-3)
+    Londres: 0, // Reino Unido (UTC+0)
+    Madrid: 1, // España (UTC+1) - Horario de verano Europa
+    Miami: -4, // USA Este (UTC-4) - Horario de verano
+    "New York": -4, // USA Este (UTC-4) - Horario de verano
+    "🌍 Ciudades Internacionales": 0, // Default
+  };
+
+  // 🔥 Lista de ciudades colombianas para detectar vuelos internacionales
+  const colombianCities = [
+    "Arauca",
+    "Armenia",
+    "Barranquilla",
+    "Bogotá",
+    "Bucaramanga",
+    "Cali",
+    "Cartagena",
+    "Cúcuta",
+    "Florencia",
+    "Ibagué",
+    "Leticia",
+    "Manizales",
+    "Medellín",
+    "Mitú",
+    "Mocoa",
+    "Montería",
+    "Neiva",
+    "Pasto",
+    "Pereira",
+    "Popayán",
+    "Puerto Carreño",
+    "Quibdó",
+    "Riohacha",
+    "San Andrés",
+    "San José del Guaviare",
+    "Santa Marta",
+    "Sincelejo",
+    "Tunja",
+    "Valledupar",
+    "Villavicencio",
+    "Yopal",
+  ];
+
+  // 🔥 FUNCIÓN: Determinar si un vuelo es internacional
+  const isInternationalFlight = (origen, destino) => {
+    const esOrigenColombiano = colombianCities.includes(origen);
+    const esDestinoColombiano = colombianCities.includes(destino);
+    return !esOrigenColombiano || !esDestinoColombiano;
+  };
+
+  // 🔥 FUNCIÓN MEJORADA: Obtener diferencia horaria entre dos ciudades
+  const getTimeDifference = (origen, destino) => {
+    const tzOrigen = timeZones[origen] !== undefined ? timeZones[origen] : -5;
+    const tzDestino =
+      timeZones[destino] !== undefined ? timeZones[destino] : -5;
+    const difference = tzDestino - tzOrigen;
+
+    console.log(`🕐 DIFERENCIA HORARIA CALCULADA:`, {
+      origen: origen,
+      tzOrigen: tzOrigen,
+      destino: destino,
+      tzDestino: tzDestino,
+      diferencia: `${difference} horas`,
+      calculo: `${tzDestino} - ${tzOrigen} = ${difference}`,
+    });
+
+    return difference;
+  };
+
+  // 🔥 FUNCIÓN HELPER: Limpiar fecha de formato ISO a formato simple
+  const cleanDate = (dateString) => {
+    if (!dateString) return null;
+    if (typeof dateString === "string" && dateString.includes("T")) {
+      return dateString.split("T")[0];
+    }
+    return dateString;
+  };
+
+  // 🔥 FUNCIÓN CORREGIDA: Calcular llegada para vuelos internacionales CON CAMBIO DE FECHA
+  const calculateInternationalArrival = (
+    departureTime,
+    duration,
+    departureDate,
+    origen,
+    destino
+  ) => {
+    if (!departureTime || !departureDate) {
+      return { time: "00:00", date: departureDate };
+    }
+
+    try {
+      const [hours, minutes] = departureTime.split(":").map(Number);
+
+      // Parsear fecha/hora de salida en zona de origen
+      const [year, month, day] = departureDate.split("-").map(Number);
+      const departureDateTime = new Date(year, month - 1, day, hours, minutes);
+
+      const durationMinutes = parseDuration(duration);
+
+      // 1. CALCULAR LLEGADA EN ZONA HORARIA DE ORIGEN
+      const arrivalDateTimeOriginTZ = new Date(
+        departureDateTime.getTime() + durationMinutes * 60 * 1000
+      );
+
+      // 2. OBTENER DIFERENCIA HORARIA
+      const timeDiff = getTimeDifference(origen, destino);
+
+      // 3. APLICAR DIFERENCIA HORARIA PARA OBTENER HORA LOCAL DESTINO
+      const arrivalDateTimeDestTZ = new Date(
+        arrivalDateTimeOriginTZ.getTime() + timeDiff * 60 * 60 * 1000
+      );
+
+      // Formatear resultados
+      const arrivalTime = arrivalDateTimeDestTZ
+        .toLocaleTimeString("es-CO", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        })
+        .replace(/:/g, ":");
+
+      const arrivalDate = arrivalDateTimeDestTZ.toISOString().split("T")[0];
+
+      console.log(`🌍 CÁLCULO INTERNACIONAL CORREGIDO:`, {
+        origen,
+        destino,
+        salida: `${departureDate} ${departureTime}`,
+        duracion: `${durationMinutes}min`,
+        diferenciaHoraria: `${timeDiff}h`,
+        llegadaOrigenTZ: arrivalDateTimeOriginTZ.toLocaleString(),
+        llegadaDestinoTZ: arrivalDateTimeDestTZ.toLocaleString(),
+        resultado: `${arrivalDate} ${arrivalTime}`,
+      });
+
+      return {
+        time: arrivalTime,
+        date: arrivalDate,
+        datetime: arrivalDateTimeDestTZ,
+      };
+    } catch (error) {
+      console.error("❌ Error en cálculo internacional:", error);
+      return {
+        time: "00:00",
+        date: departureDate,
+      };
+    }
+  };
+
+  // 🔥 FUNCIÓN MEJORADA: Calcular llegada para vuelos nacionales
+  const calculateNationalArrival = (
+    departureTime,
+    duration,
+    departureDate,
+    flightInfo = {}
+  ) => {
+    if (!departureTime || !departureDate) {
+      return { time: "00:00", date: departureDate };
+    }
+
+    try {
+      const [hours, minutes] = departureTime.split(":").map(Number);
+
+      // Parsear fecha/hora de salida
+      const [year, month, day] = departureDate.split("-").map(Number);
+      const departureDateTime = new Date(year, month - 1, day, hours, minutes);
+
+      const durationMinutes = parseDuration(duration);
+
+      // Calcular llegada
+      const arrivalDateTime = new Date(
+        departureDateTime.getTime() + durationMinutes * 60 * 1000
+      );
+
+      const arrivalTime = arrivalDateTime
+        .toLocaleTimeString("es-CO", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        })
+        .replace(/:/g, ":");
+
+      const arrivalDate = arrivalDateTime.toISOString().split("T")[0];
+
+      console.log(`🇨🇴 CÁLCULO NACIONAL:`, {
+        vuelo: flightInfo.id,
+        salida: `${departureDate} ${departureTime}`,
+        duracion: `${durationMinutes}min`,
+        llegada: `${arrivalDate} ${arrivalTime}`,
+        cambioDia: arrivalDate !== departureDate ? "✅ SI" : "❌ NO",
+      });
+
+      return {
+        time: arrivalTime,
+        date: arrivalDate,
+        datetime: arrivalDateTime,
+      };
+    } catch (error) {
+      console.error("❌ Error en cálculo nacional:", error);
+      return {
+        time: "00:00",
+        date: departureDate,
+      };
+    }
+  };
+
+  // 🔥 FUNCIÓN MAESTRA: Maneja nacionales e internacionales
+  const calculateFinalArrival = (flight, isReturnFlight = false) => {
+    const flightData = isReturnFlight ? flight.returnFlight : flight;
+
+    if (!flightData) return { time: "00:00", date: flightData?.fecha_salida };
+
+    const isInternational = isInternationalFlight(
+      flightData.origen,
+      flightData.destino
+    );
+
+    if (isInternational) {
+      return calculateInternationalArrival(
+        formatTime(flightData.hora_salida),
+        flightData.duracion,
+        cleanDate(flightData.fecha_salida),
+        flightData.origen,
+        flightData.destino
+      );
+    } else {
+      return calculateNationalArrival(
+        formatTime(flightData.hora_salida),
+        flightData.duracion,
+        cleanDate(flightData.fecha_salida),
+        {
+          id: flightData.id_vuelo,
+          origen: flightData.origen,
+          destino: flightData.destino,
+        }
+      );
+    }
+  };
 
   // Verificar autenticación
   useEffect(() => {
@@ -47,10 +369,13 @@ function SearchFlights() {
     checkAuth();
   }, []);
 
-  // 🔥 NUEVA FUNCIÓN: Verificar si es admin
-  const isAdminUser = () => {
+  // 🔥 FUNCIÓN MEJORADA: Verificar si puede usar carrito
+  const canUseCart = () => {
     const adminRoles = ["Administrador", "administrador", "admin", "root"];
-    return adminRoles.includes(userRole);
+    const clientRoles = ["Cliente", "cliente", "customer"];
+
+    // Solo usuarios normales (no admin y no cliente) pueden usar carrito
+    return !adminRoles.includes(userRole) && !clientRoles.includes(userRole);
   };
 
   // Cerrar sesión
@@ -62,20 +387,214 @@ function SearchFlights() {
     navigate("/");
   };
 
-  // 🔥 MODIFICADA: Obtener vuelos - USANDO DATOS DEL MISMO VUELO PARA IDA Y VUELTA
-  const fetchFlights = async () => {
-    const departureDateSQL =
-      searchParams.departureDateSQL ||
-      (searchParams.departureDate
-        ? new Date(searchParams.departureDate).toISOString().split("T")[0]
-        : null);
+  // 🔥 FUNCIÓN: Debug detallado del objeto de duración
+  const debugDurationObject = (durationObj) => {
+    console.log("🔍 DEBUG DETALLADO DEL OBJETO DURACIÓN:");
+    console.log("Tipo:", typeof durationObj);
+    console.log("Estructura completa:", JSON.stringify(durationObj, null, 2));
+    console.log("Propiedades disponibles:", Object.keys(durationObj));
 
-    if (
-      !searchParams.origin ||
-      !searchParams.destination ||
-      !departureDateSQL
-    ) {
-      setErrorMsg("Faltan parámetros de búsqueda.");
+    // Mostrar todos los valores de las propiedades
+    Object.keys(durationObj).forEach((key) => {
+      console.log(
+        `- ${key}:`,
+        durationObj[key],
+        `(tipo: ${typeof durationObj[key]})`
+      );
+    });
+  };
+
+  // 🔥 FUNCIÓN CORREGIDA: Parsear duración que puede venir como objeto
+  const parseDuration = (duration) => {
+    console.log(
+      "🕐 Duración recibida del backend:",
+      duration,
+      "Tipo:",
+      typeof duration
+    );
+
+    if (!duration) {
+      console.log("❌ Duración vacía, usando 60min por defecto");
+      return 60;
+    }
+
+    // 1. Si es un OBJETO (lo que está pasando)
+    if (typeof duration === "object" && duration !== null) {
+      console.log("🔍 Analizando objeto de duración:");
+      debugDurationObject(duration);
+
+      // ✅ CORRECCIÓN: Sumar horas y minutos correctamente
+      if (duration.hours !== undefined || duration.minutes !== undefined) {
+        const horas = duration.hours || 0;
+        const minutos = duration.minutes || 0;
+        const totalMinutes = horas * 60 + minutos; // ← ¡CORRECCIÓN APLICADA!
+        console.log("✅ Duración CORRECTA desde objeto {hours, minutes}:", {
+          horas: horas,
+          minutos: minutos,
+          totalMinutos: totalMinutes,
+        });
+        return totalMinutes;
+      }
+
+      if (duration.horas !== undefined || duration.minutos !== undefined) {
+        const horas = duration.horas || 0;
+        const minutos = duration.minutos || 0;
+        const totalMinutes = horas * 60 + minutos; // ← ¡CORRECCIÓN APLICADA!
+        console.log("✅ Duración CORRECTA desde objeto {horas, minutos}:", {
+          horas: horas,
+          minutos: minutos,
+          totalMinutos: totalMinutes,
+        });
+        return totalMinutes;
+      }
+
+      // Intentar extraer la duración de diferentes propiedades posibles
+      const possibleProperties = [
+        "duracion",
+        "duration",
+        "tiempo",
+        "time",
+        "horas",
+        "hours",
+        "hhmm",
+        "hh_mm",
+        "value",
+        "valor",
+        "total",
+        "total_minutes",
+        "minutos",
+        "minutes",
+        "mins",
+        "min",
+      ];
+
+      for (const prop of possibleProperties) {
+        if (
+          duration[prop] !== undefined &&
+          duration[prop] !== null &&
+          duration[prop] !== ""
+        ) {
+          console.log(`✅ Encontrada propiedad "${prop}":`, duration[prop]);
+          // Llamar recursivamente con el valor encontrado
+          return parseDuration(duration[prop]);
+        }
+      }
+
+      // Si el objeto tiene formato ISO o timestamp
+      if (duration.iso || duration.timestamp || duration.date) {
+        const dateStr = duration.iso || duration.timestamp || duration.date;
+        console.log("🔄 Intentando parsear desde fecha ISO:", dateStr);
+        return parseDuration(dateStr);
+      }
+
+      console.log("❌ No se pudo extraer duración del objeto:", duration);
+      return 120;
+    }
+
+    // 2. Si ya es un número (minutos)
+    if (typeof duration === "number" && isFinite(duration)) {
+      console.log("✅ Duración como número:", duration, "minutos");
+      return Math.max(0, Math.round(duration));
+    }
+
+    // 3. Si es un string en formato "HH:MM" (lo que envía tu backend)
+    if (typeof duration === "string") {
+      const str = duration.trim();
+      console.log("🔍 Procesando duración como string:", str);
+
+      // --- FORMATO PRINCIPAL: "HH:MM" (ej: "01:30", "00:46") ---
+      const timeMatch = str.match(/^(\d{1,2}):([0-5]\d)$/);
+      if (timeMatch) {
+        const hours = parseInt(timeMatch[1], 10);
+        const minutes = parseInt(timeMatch[2], 10);
+        const totalMinutes = hours * 60 + minutes;
+
+        console.log("✅ Duración parseada desde HH:MM:", {
+          horas: hours,
+          minutos: minutes,
+          totalMinutos: totalMinutes,
+        });
+
+        return totalMinutes;
+      }
+
+      // --- FORMATO ISO DATE: "1970-01-01T00:46:00.000Z" ---
+      if (str.includes("T") && (str.includes("Z") || str.includes("-"))) {
+        try {
+          const date = new Date(str);
+          if (!isNaN(date)) {
+            const hours = date.getUTCHours();
+            const minutes = date.getUTCMinutes();
+            const totalMinutes = hours * 60 + minutes;
+            console.log(
+              "✅ Duración parseada desde ISO Date:",
+              totalMinutes,
+              "minutos"
+            );
+            return totalMinutes;
+          }
+        } catch (e) {
+          console.log("❌ Error parseando ISO Date:", e);
+        }
+      }
+
+      // --- FORMATO ALTERNATIVO: solo minutos (ej: "90") ---
+      const numberMatch = str.match(/^\d+$/);
+      if (numberMatch) {
+        const totalMinutes = parseInt(str, 10);
+        console.log(
+          "✅ Duración como minutos directos:",
+          totalMinutes,
+          "minutos"
+        );
+        return totalMinutes;
+      }
+
+      console.log("⚠️ Formato de duración no reconocido:", str);
+    }
+
+    // 4. Valor por defecto si no se puede parsear
+    console.log(
+      `❌ No se pudo parsear "${duration}", usando 120min por defecto`
+    );
+    return 120;
+  };
+
+  // 🔥 FUNCIÓN MEJORADA: Determinar el tipo de búsqueda
+  const getSearchTypeDescription = () => {
+    const { origin, destination, departureDate, returnDate, tripType } =
+      searchParams;
+
+    const parts = [];
+
+    if (origin) parts.push(`desde ${origin}`);
+    if (destination) parts.push(`hacia ${destination}`);
+    if (departureDate) parts.push(`salida ${formatDate(departureDate)}`);
+    if (returnDate && tripType === "roundtrip")
+      parts.push(`regreso ${formatDate(returnDate)}`);
+
+    if (parts.length === 0) return "Búsqueda general de vuelos";
+
+    return `Vuelos ${parts.join(" | ")}`;
+  };
+
+  // 🔥 FUNCIÓN COMPLETAMENTE MODIFICADA Y CORREGIDA CON DEBUG EXTENDIDO: Buscar vuelos usando el backend existente
+  const fetchFlights = async () => {
+    const { origin, destination, departureDate, returnDate, tripType } =
+      searchParams;
+
+    console.log("🔍 PARÁMETROS DE BÚSQUEDA:", {
+      origin,
+      destination,
+      departureDate,
+      returnDate,
+      tripType,
+    });
+
+    // 🔥 VALIDACIÓN FLEXIBLE: Solo requiere al menos un campo
+    if (!origin && !destination && !departureDate && !returnDate) {
+      setErrorMsg("Por favor completa al menos un campo para buscar vuelos.");
+      setLoading(false);
       return;
     }
 
@@ -83,109 +602,278 @@ function SearchFlights() {
     setErrorMsg("");
 
     try {
-      // SOLO buscar vuelo de IDA
-      const url = `http://localhost:5000/api/search-flights?origen=${encodeURIComponent(
-        searchParams.origin
-      )}&destino=${encodeURIComponent(
-        searchParams.destination
-      )}&fecha_salida=${encodeURIComponent(departureDateSQL)}`;
+      // 🔥 CONSTRUIR PARÁMETROS PARA EL BACKEND EXISTENTE
+      const params = new URLSearchParams();
 
-      console.log("🔄 Buscando vuelos:", url);
+      // Mapear nombres del frontend al backend
+      if (origin) params.append("origen", origin);
+      if (destination) params.append("destino", destination);
+
+      // 🔥 CORREGIR: Mapear tripType a tipo_viaje que el backend espera
+      if (tripType === "roundtrip") {
+        params.append("tipo_viaje", "idayvuelta");
+      } else if (tripType === "oneway") {
+        params.append("tipo_viaje", "soloida");
+      }
+
+      // Usar las fechas según corresponda
+      if (departureDate) {
+        const departureDateSQL =
+          searchParams.departureDateSQL ||
+          new Date(departureDate).toISOString().split("T")[0];
+        params.append("fecha_salida", departureDateSQL);
+      }
+
+      if (returnDate && tripType === "roundtrip") {
+        const returnDateSQL = new Date(returnDate).toISOString().split("T")[0];
+        params.append("fecha_regreso", returnDateSQL);
+      }
+
+      // 🔥 DEBUG DETALLADO DE LOS PARÁMETROS ENVIADOS
+      console.log("🎯 PARÁMETROS ENVIADOS AL BACKEND:");
+      console.log("  - origen:", origin);
+      console.log("  - destino:", destination);
+      console.log(
+        "  - tipo_viaje:",
+        tripType === "roundtrip" ? "idayvuelta" : "soloida"
+      );
+      console.log("  - fecha_salida:", departureDate);
+      console.log("  - fecha_regreso:", returnDate);
+      console.log("  - Query string completo:", params.toString());
+
+      // 🔥 USAR EL ENDPOINT EXISTENTE DEL BACKEND
+      const url = `http://localhost:5000/api/search-flights?${params.toString()}`;
+      console.log("🔄 URL de búsqueda CORREGIDA:", url);
 
       const response = await fetch(url);
-      const flightsData = await response.json();
 
-      console.log("📦 Vuelos encontrados:", flightsData);
-
-      // 🔥 DEBUG: Ver estructura completa del primer vuelo
-      if (flightsData.length > 0) {
-        console.log("🔍 ESTRUCTURA COMPLETA del primer vuelo:", flightsData[0]);
-        console.log("📋 CAMPOS DISPONIBLES:", Object.keys(flightsData[0]));
+      if (!response.ok) {
+        throw new Error(
+          `Error HTTP: ${response.status} - ${response.statusText}`
+        );
       }
 
-      // Validar respuesta
-      if (!Array.isArray(flightsData)) {
-        setErrorMsg("Respuesta inesperada del servidor.");
-        setFlights([]);
-        return;
+      const data = await response.json();
+      console.log("📦 Respuesta COMPLETA del backend:", data);
+
+      // 🔥 PROCESAR RESPUESTA SEGÚN LA ESTRUCTURA DEL BACKEND
+      let vuelosIda = data.vuelosIda || [];
+      let vuelosRegreso = data.vuelosRegreso || [];
+
+      console.log(
+        `✈️ Vuelos encontrados - Ida: ${vuelosIda.length}, Regreso: ${vuelosRegreso.length}`
+      );
+
+      // 🔥 NUEVO: FILTRAR VUELOS POR FECHA VIGENTE
+      vuelosIda = filterFlightsByDate(vuelosIda);
+      vuelosRegreso = filterFlightsByDate(vuelosRegreso);
+
+      console.log(
+        `✅ Vuelos vigentes - Ida: ${vuelosIda.length}, Regreso: ${vuelosRegreso.length}`
+      );
+
+      // 🔥 DEBUG DETALLADO: Ver estructura de los vuelos
+      if (vuelosIda.length > 0) {
+        console.log(
+          "🔍 PRIMER VUELO DE IDA:",
+          JSON.stringify(vuelosIda[0], null, 2)
+        );
+      } else {
+        console.log("❌ NO HAY VUELOS DE IDA ENCONTRADOS");
       }
 
-      // 🔥 NUEVO: Procesar los vuelos según el tipo de viaje
-      const processedFlights = flightsData.map((flight) => {
-        const isRoundTrip = searchParams.tripType === "roundtrip";
+      if (vuelosRegreso.length > 0) {
+        console.log(
+          "🔍 PRIMER VUELO DE REGRESO:",
+          JSON.stringify(vuelosRegreso[0], null, 2)
+        );
+      } else {
+        console.log("❌ NO HAY VUELOS DE REGRESO ENCONTRADOS");
+      }
 
-        // Si es búsqueda de ida y vuelta Y el vuelo tiene datos de retorno
-        // Buscamos diferentes nombres de campos que podrían contener la fecha de retorno
-        const hasReturnData =
-          flight.fecha_retorno || flight.fecha_vuelta || flight.return_date;
-
-        if (isRoundTrip && hasReturnData) {
-          console.log("✅ Vuelo ida y vuelta detectado:", flight);
-
-          // Determinar los nombres de campos para el retorno
-          const fechaRetorno =
-            flight.fecha_retorno || flight.fecha_vuelta || flight.return_date;
-          const horaRetorno =
-            flight.hora_retorno ||
-            flight.hora_vuelta ||
-            flight.return_time ||
-            flight.hora_salida;
-          const costoRetorno =
-            flight.costo_retorno ||
-            flight.precio_vuelta ||
-            flight.return_price ||
-            flight.costo_economico;
-          const duracionRetorno =
-            flight.duracion_retorno ||
-            flight.duracion_vuelta ||
-            flight.return_duration ||
-            flight.duracion;
-
-          return {
-            ...flight,
-            tripType: "roundtrip",
-            isRoundTrip: true,
-            hasReturnFlight: true,
-            // 🔥 Los datos del vuelo de retorno se derivan del mismo vuelo
-            returnFlight: {
-              id_vuelo: flight.id_vuelo_retorno || flight.id_vuelo, // Mismo ID o ID diferente
-              origen: flight.destino, // El destino de ida es el origen de vuelta
-              destino: flight.origen, // El origen de ida es el destino de vuelta
-              fecha_salida: fechaRetorno,
-              hora_salida: horaRetorno,
-              duracion: duracionRetorno,
-              costo_economico: costoRetorno,
-              costo_vip: flight.costo_vip_retorno || flight.costo_vip,
-              tipo_vuelo: flight.tipo_vuelo_retorno || flight.tipo_vuelo,
-              estado: flight.estado_retorno || flight.estado,
-            },
-            // Precio total (ida + vuelta)
-            precio_total: flight.costo_economico + costoRetorno,
-            precio_total_vip:
-              flight.costo_vip + (flight.costo_vip_retorno || flight.costo_vip),
-          };
-        } else {
-          // Vuelo solo de ida
-          console.log("ℹ️ Vuelo solo ida detectado:", flight);
-          return {
-            ...flight,
-            tripType: "oneway",
-            isRoundTrip: false,
-            hasReturnFlight: false,
-            precio_total: flight.costo_economico,
-            precio_total_vip: flight.costo_vip,
-          };
-        }
+      // 🔥 DEBUG EXTRA: ANALIZAR CIUDADES EN DETALLE
+      console.log("🎯 DEBUG DETALLADO DE CIUDADES:");
+      console.log("=== VUELOS DE IDA ===");
+      vuelosIda.forEach((v, i) => {
+        console.log(
+          `Ida ${i + 1}: ${v.origen} -> ${v.destino} (ID: ${v.id_vuelo})`
+        );
       });
 
-      console.log("✈️ Vuelos procesados:", processedFlights);
+      console.log("=== VUELOS DE REGRESO ===");
+      vuelosRegreso.forEach((v, i) => {
+        console.log(
+          `Regreso ${i + 1}: ${v.origen} -> ${v.destino} (ID: ${v.id_vuelo})`
+        );
+      });
+
+      // 🔥 ANÁLISIS DEL PROBLEMA: ¿POR QUÉ NO HAY VUELOS DE REGRESO?
+      console.log("🔍 ANÁLISIS DEL PROBLEMA DE REGRESO:");
+      console.log("  - Se buscó regreso de:", destination, "->", origin);
+      console.log("  - Fecha de regreso:", returnDate);
+      console.log("  - Vuelos de regreso encontrados:", vuelosRegreso.length);
+
+      if (vuelosRegreso.length === 0) {
+        console.log(
+          "❌ PROBLEMA IDENTIFICADO: No hay vuelos de regreso en la base de datos"
+        );
+        console.log("   Para la ruta:", destination, "->", origin);
+        console.log("   En la fecha:", returnDate);
+      }
+
+      // 🔥 LÓGICA COMPLETAMENTE CORREGIDA PARA COMBINAR VUELOS
+      let processedFlights = [];
+
+      if (tripType === "roundtrip") {
+        console.log("🔄 PROCESANDO VUELOS IDA Y VUELTA...");
+
+        // 🔥 SI HAY VUELOS DE REGRESO - Intentar combinarlos
+        if (vuelosRegreso.length > 0) {
+          console.log("🔍 Intentando combinar vuelos ida y regreso...");
+
+          vuelosIda.forEach((vueloIda) => {
+            // Solo procesar vuelos activos
+            if (vueloIda.estado !== "activo") {
+              console.log(
+                `❌ Vuelo ida ${vueloIda.id_vuelo} no activo, omitiendo`
+              );
+              return;
+            }
+
+            console.log(
+              `🔍 Buscando regreso para vuelo ida: ${vueloIda.origen} -> ${vueloIda.destino}`
+            );
+
+            vuelosRegreso.forEach((vueloRegreso) => {
+              if (vueloRegreso.estado !== "activo") {
+                console.log(
+                  `❌ Vuelo regreso ${vueloRegreso.id_vuelo} no activo, omitiendo`
+                );
+                return;
+              }
+
+              console.log(
+                `🔍 Evaluando regreso: ${vueloRegreso.origen} -> ${vueloRegreso.destino}`
+              );
+
+              // 🔥 CRITERIO FLEXIBLE MEJORADO: Verificar que sean ciudades complementarias
+              const esCombinacionValida =
+                (vueloIda.destino === vueloRegreso.origen &&
+                  vueloIda.origen === vueloRegreso.destino) ||
+                vueloIda.destino
+                  .toLowerCase()
+                  .includes(vueloRegreso.origen.toLowerCase()) ||
+                vueloRegreso.origen
+                  .toLowerCase()
+                  .includes(vueloIda.destino.toLowerCase());
+
+              console.log(
+                `  - Combinación: ${vueloIda.origen}->${vueloIda.destino} + ${vueloRegreso.origen}->${vueloRegreso.destino}`
+              );
+              console.log(`  - Válida: ${esCombinacionValida}`);
+
+              if (esCombinacionValida) {
+                console.log(`✅ Combinación válida encontrada!`);
+
+                const combinedFlight = {
+                  ...vueloIda,
+                  tripType: "roundtrip",
+                  isRoundTrip: true,
+                  hasReturnFlight: true,
+                  returnFlight: vueloRegreso,
+                  precio_total:
+                    (Number(vueloIda.costo_economico) || 0) +
+                    (Number(vueloRegreso.costo_economico) || 0),
+                  precio_total_vip:
+                    (Number(vueloIda.costo_vip) || 0) +
+                    (Number(vueloRegreso.costo_vip) || 0),
+                  combinationId: `combo_${vueloIda.id_vuelo}_${vueloRegreso.id_vuelo}`,
+                };
+
+                processedFlights.push(combinedFlight);
+              }
+            });
+          });
+
+          console.log(
+            `🔄 Combinaciones encontradas: ${processedFlights.length}`
+          );
+        }
+
+        // 🔥 SI NO HAY COMBINACIONES O NO HAY VUELOS DE REGRESO, MOSTRAR VUELOS DE IDA CON INDICACIÓN
+        if (processedFlights.length === 0) {
+          console.log(
+            "⚠️ No se pudieron crear combinaciones, mostrando vuelos de ida"
+          );
+
+          processedFlights = vuelosIda
+            .filter((vuelo) => vuelo.estado === "activo")
+            .map((vuelo) => ({
+              ...vuelo,
+              tripType: "roundtrip",
+              isRoundTrip: true,
+              hasReturnFlight: false, // Indica que NO tiene vuelo de regreso
+              precio_total: Number(vuelo.costo_economico) || 0,
+              precio_total_vip: Number(vuelo.costo_vip) || 0,
+              missingReturn: true, // Para mostrar mensaje al usuario
+            }));
+
+          // 🔥 MENSAJES INFORMATIVOS MEJORADOS
+          if (vuelosRegreso.length === 0) {
+            const mensajeError = `✈️ Encontramos vuelos de ida pero no de regreso para las fechas seleccionadas. 
+            Buscamos vuelos de ${destination} a ${origin} para el ${returnDate} pero no hay disponibilidad.
+            Puedes reservar solo el vuelo de ida o intentar con otras fechas.`;
+
+            console.log("📢 Mensaje de error al usuario:", mensajeError);
+            setErrorMsg(mensajeError);
+          } else {
+            setErrorMsg(
+              "🔄 Encontramos vuelos de ida y regreso por separado, pero no pudimos combinarlos automáticamente. " +
+                "Mostrando vuelos de ida disponibles."
+            );
+          }
+        }
+      } else {
+        // 🔥 PARA SOLO IDA O BÚSQUEDAS SIN REGRESO
+        console.log("✈️ Procesando vuelos solo ida");
+        processedFlights = vuelosIda
+          .filter((vuelo) => vuelo.estado === "activo")
+          .map((vuelo) => ({
+            ...vuelo,
+            tripType: tripType || "oneway",
+            isRoundTrip: false,
+            hasReturnFlight: false,
+            precio_total: Number(vuelo.costo_economico) || 0,
+            precio_total_vip: Number(vuelo.costo_vip) || 0,
+          }));
+      }
+
+      console.log("✈️ Vuelos procesados finales:", processedFlights.length);
+      console.log("📋 Detalle vuelos procesados:", processedFlights);
+
+      // 🔥 DEBUG FINAL DEL ESTADO
+      console.log("🎯 ESTADO FINAL:");
+      console.log("  - Vuelos a mostrar:", processedFlights.length);
+      console.log("  - Hay error:", errorMsg);
+      console.log("  - Loading:", loading);
+
       setFlights(processedFlights);
+
+      // 🔥 MENSAJES INFORMATIVOS MEJORADOS
+      if (processedFlights.length === 0) {
+        if (vuelosIda.length === 0 && vuelosRegreso.length === 0) {
+          setErrorMsg(
+            `No se encontraron vuelos que coincidan con tu búsqueda: ${getSearchTypeDescription()}`
+          );
+        }
+      }
     } catch (error) {
-      console.error("Error al buscar vuelos:", error);
-      setErrorMsg("Error de conexión con el servidor.");
+      console.error("❌ Error completo al buscar vuelos:", error);
+      setErrorMsg(`Error al buscar vuelos: ${error.message}`);
       setFlights([]);
     } finally {
       setLoading(false);
+      console.log("🏁 Búsqueda finalizada, loading: false");
     }
   };
 
@@ -203,7 +891,7 @@ function SearchFlights() {
     }).format(price);
   };
 
-  // ✅ Formatear hora (maneja ISO o texto plano)
+  // ✅ FUNCIÓN CORREGIDA: Formatear hora (maneja ISO o texto plano)
   const formatTime = (timeString) => {
     if (!timeString) return "00:00";
 
@@ -225,11 +913,27 @@ function SearchFlights() {
     }
   };
 
-  // ✅ Formatear fecha (maneja ISO o texto plano)
+  // ✅ FUNCIÓN CORREGIDA: Formatear fecha (maneja zona horaria correctamente)
   const formatDate = (dateString) => {
     if (!dateString) return "Fecha no disponible";
 
     try {
+      // Si la fecha ya está en formato ISO (YYYY-MM-DD), manejarla directamente
+      if (
+        typeof dateString === "string" &&
+        dateString.match(/^\d{4}-\d{2}-\d{2}$/)
+      ) {
+        const [year, month, day] = dateString.split("-").map(Number);
+        // Crear fecha en zona horaria local para evitar desplazamientos
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString("es-CO", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      }
+
+      // Para otros formatos, usar el método anterior
       const date = new Date(dateString);
       if (!isNaN(date)) {
         return date.toLocaleDateString("es-CO", {
@@ -238,84 +942,49 @@ function SearchFlights() {
           day: "numeric",
         });
       }
-      if (typeof dateString === "string") {
-        return dateString.split(" ")[0];
-      }
+
       return "Fecha no disponible";
     } catch {
       return "Fecha no disponible";
     }
   };
 
-  // 🔥 FUNCIÓN MEJORADA Y ACORTADA: Parsear duración
-  const parseDuration = (duration) => {
-    // 1. Valor por defecto si no hay nada
-    if (!duration) {
-      console.log("❌ Duración vacía, usando 60min por defecto");
-      return 60;
-    }
+  // ✅ NUEVA FUNCIÓN: Formatear fecha corta (vie, 12 nov)
+  const formatShortDate = (dateString) => {
+    if (!dateString) return "Fecha no disponible";
 
-    // 2. Si ya es un número (minutos)
-    if (typeof duration === "number" && isFinite(duration)) {
-      return Math.max(0, Math.round(duration));
-    }
-
-    // 3. Si es un string
-    if (typeof duration === "string") {
-      const str = duration.trim();
-
-      // --- CASO 1: String de Fecha ISO (Lo más probable desde la BD) ---
-      // Ej: "1970-01-01T00:46:00.000Z"
-      if (str.includes("T") && (str.includes("Z") || str.includes("-"))) {
-        try {
-          const date = new Date(str);
-          if (!isNaN(date)) {
-            // Usamos UTC para evitar corrimientos por zona horaria
-            const hours = date.getUTCHours();
-            const minutes = date.getUTCMinutes();
-            const totalMinutes = hours * 60 + minutes;
-
-            if (totalMinutes > 0) {
-              console.log(
-                "✅ Duración parseada desde ISO Date:",
-                totalMinutes,
-                "minutos"
-              );
-              return totalMinutes;
-            }
-          }
-        } catch (e) {
-          /* Ignorar y probar el siguiente formato */
-        }
+    try {
+      if (
+        typeof dateString === "string" &&
+        dateString.match(/^\d{4}-\d{2}-\d{2}$/)
+      ) {
+        const [year, month, day] = dateString.split("-").map(Number);
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString("es-CO", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+        });
       }
 
-      // --- CASO 2: Formato HH:MM:SS o HH:MM ---
-      // Ej: "00:46:00" o "00:46"
-      const colonMatch = str.match(/^(\d{1,2}):([0-5]\d)(?::([0-5]\d))?$/);
-      if (colonMatch) {
-        const hours = parseInt(colonMatch[1], 10);
-        const minutes = parseInt(colonMatch[2], 10);
-        const totalMinutes = hours * 60 + minutes;
-        console.log(
-          "✅ Duración parseada desde HH:MM(:SS):",
-          totalMinutes,
-          "minutos"
-        );
-        return totalMinutes;
+      const date = new Date(dateString);
+      if (!isNaN(date)) {
+        return date.toLocaleDateString("es-CO", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+        });
       }
-    }
 
-    // 4. Si nada funciona, usar el valor por defecto
-    console.log(
-      `⚠️ No se pudo parsear "${duration}", usando 60min por defecto`
-    );
-    return 60;
+      return "Fecha no disponible";
+    } catch {
+      return "Fecha no disponible";
+    }
   };
 
   // 🔥 FUNCIÓN MEJORADA: Formatear duración para mostrar
   const formatDuration = (duration) => {
     const totalMinutes = parseDuration(duration);
-
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
 
@@ -328,38 +997,7 @@ function SearchFlights() {
     }
   };
 
-  // 🔥 FUNCIÓN MEJORADA: Calcular hora de llegada
-  const calculateArrivalTime = (departureTime, duration) => {
-    if (!departureTime) return "00:00";
-
-    try {
-      // Parsear hora de salida
-      const [hours, minutes] = departureTime.split(":").map(Number);
-      let totalMinutes = hours * 60 + minutes;
-
-      // Parsear duración
-      const durationMinutes = parseDuration(duration);
-      console.log("✈️ Tiempo de vuelo:", durationMinutes, "minutos");
-
-      totalMinutes += durationMinutes;
-
-      // Calcular hora de llegada
-      const arrivalHours = Math.floor(totalMinutes / 60) % 24;
-      const arrivalMinutes = totalMinutes % 60;
-
-      const result = `${arrivalHours
-        .toString()
-        .padStart(2, "0")}:${arrivalMinutes.toString().padStart(2, "0")}`;
-      console.log("🛬 Hora de llegada calculada:", result);
-
-      return result;
-    } catch (error) {
-      console.error("Error calculando hora de llegada:", error);
-      return "00:00";
-    }
-  };
-
-  // 🔥 MODIFICADA: Manejar selección de vuelo - CON SOPORTE PARA IDA Y VUELTA REAL
+  // 🔥 FUNCIÓN CORREGIDA: Manejar selección de vuelo con precios correctos
   const handleSelectFlight = (flight) => {
     if (!isAuthenticated) {
       alert("Debes iniciar sesión para reservar un vuelo");
@@ -372,66 +1010,89 @@ function SearchFlights() {
       return;
     }
 
+    // 🔥 CALCULAR LLEGADAS CON NUEVO SISTEMA
+    const llegadaIda = calculateFinalArrival(flight, false);
+    const llegadaRetorno = flight.returnFlight
+      ? calculateFinalArrival(flight, true)
+      : null;
+
+    // 🔥 DEBUG: VER PRECIOS ORIGINALES DEL VUELO
+    console.log("🔍 PRECIOS ORIGINALES DEL VUELO:", {
+      costo_economico: flight.costo_economico,
+      costo_vip: flight.costo_vip,
+      precio_total: flight.precio_total,
+      precio_total_vip: flight.precio_total_vip,
+      returnFlight: flight.returnFlight
+        ? {
+            costo_economico: flight.returnFlight.costo_economico,
+            costo_vip: flight.returnFlight.costo_vip,
+          }
+        : null,
+    });
+
     // Preparar datos del vuelo para ReserveFlight
     const flightData = {
       // Datos del vuelo de ida
       flightNumber: flight.id_vuelo,
       airline: "VivaSky Airlines",
-      price: formatPrice(
-        flight.isRoundTrip ? flight.precio_total : flight.costo_economico
-      ),
-      priceNumber: flight.isRoundTrip
-        ? flight.precio_total
-        : Number(flight.costo_economico) || 0,
-      costo_vip: flight.isRoundTrip
-        ? flight.precio_total_vip
-        : flight.costo_vip || Math.round(flight.costo_economico * 1.5),
+      price: formatPrice(flight.costo_economico), // 🔥 CORREGIDO: Usar costo_economico individual
+      priceNumber: Number(flight.costo_economico) || 0, // 🔥 CORREGIDO: Precio individual de ida
+      costo_vip: Number(flight.costo_vip) || 0, // 🔥 CORREGIDO: Precio VIP individual de ida
       duration: formatDuration(flight.duracion),
-      stops: flight.tipo_vuelo === "directo" ? "Directo" : "Directo",
+      stops: "Directo",
       departure: {
         city: flight.origen,
         airport: flight.origen,
         time: formatTime(flight.hora_salida),
         date: formatDate(flight.fecha_salida),
+        isInternational: !colombianCities.includes(flight.origen),
       },
       arrival: {
         city: flight.destino,
         airport: flight.destino,
-        time: calculateArrivalTime(
-          formatTime(flight.hora_salida),
-          flight.duracion
-        ),
-        date: formatDate(flight.fecha_salida),
+        time: llegadaIda.time,
+        date: formatDate(llegadaIda.date),
+        isInternational: !colombianCities.includes(flight.destino),
       },
 
-      // 🔥 NUEVO: Datos del vuelo de retorno si existe
+      // 🔥 Datos del vuelo de retorno si existe - CON PRECIOS INDIVIDUALES CORRECTOS
       returnFlight: flight.returnFlight
         ? {
             flightNumber: flight.returnFlight.id_vuelo,
+            airline: "VivaSky Airlines",
+            price: formatPrice(flight.returnFlight.costo_economico), // 🔥 CORREGIDO
+            priceNumber: Number(flight.returnFlight.costo_economico) || 0, // 🔥 CORREGIDO: Precio individual de retorno
+            costo_vip: Number(flight.returnFlight.costo_vip) || 0, // 🔥 CORREGIDO: Precio VIP individual de retorno
+            duration: formatDuration(flight.returnFlight.duracion),
+            stops: "Directo",
             departure: {
               city: flight.returnFlight.origen,
               airport: flight.returnFlight.origen,
               time: formatTime(flight.returnFlight.hora_salida),
               date: formatDate(flight.returnFlight.fecha_salida),
+              isInternational: !colombianCities.includes(
+                flight.returnFlight.origen
+              ),
             },
             arrival: {
               city: flight.returnFlight.destino,
               airport: flight.returnFlight.destino,
-              time: calculateArrivalTime(
-                formatTime(flight.returnFlight.hora_salida),
-                flight.returnFlight.duracion
+              time: llegadaRetorno.time,
+              date: formatDate(llegadaRetorno.date),
+              isInternational: !colombianCities.includes(
+                flight.returnFlight.destino
               ),
-              date: formatDate(flight.returnFlight.fecha_salida),
             },
-            duration: formatDuration(flight.returnFlight.duracion),
           }
         : null,
 
       isRoundTrip: flight.isRoundTrip,
+      hasReturnFlight: flight.hasReturnFlight,
       searchParams: searchParams,
+      isInternational: isInternationalFlight(flight.origen, flight.destino),
     };
 
-    console.log("🎫 Datos del vuelo para reserva:", flightData);
+    console.log("🎫 Datos del vuelo para reserva (CORREGIDOS):", flightData);
 
     // Navegar a ReserveFlight con los datos
     navigate("/reserve-flight", {
@@ -442,7 +1103,7 @@ function SearchFlights() {
     });
   };
 
-  // 🔥 NUEVA FUNCIÓN: Manejar agregar al carrito - CON SOPORTE PARA IDA Y VUELTA
+  // 🔥 FUNCIÓN CORREGIDA: Manejar agregar al carrito con precios correctos
   const handleAddToCart = (flight) => {
     if (!isAuthenticated) {
       alert("Debes iniciar sesión para agregar vuelos al carrito");
@@ -455,44 +1116,41 @@ function SearchFlights() {
       return;
     }
 
-    // 🔥 NUEVO: Verificar si es admin
-    if (isAdminUser()) {
-      alert("⛔ Los administradores no pueden agregar vuelos al carrito");
+    if (!canUseCart()) {
+      alert("⛔ Tu tipo de usuario no puede agregar vuelos al carrito");
       return;
     }
+
+    // 🔥 CALCULAR LLEGADAS CON NUEVO SISTEMA
+    const llegadaIda = calculateFinalArrival(flight, false);
+    const llegadaRetorno = flight.returnFlight
+      ? calculateFinalArrival(flight, true)
+      : null;
 
     // Preparar datos del vuelo para el carrito
     const cartItem = {
       id: flight.combinationId || `flight_${flight.id_vuelo}_${Date.now()}`,
       flightNumber: `VS${flight.id_vuelo}`,
       airline: "VivaSky Airlines",
-      price: formatPrice(
-        flight.isRoundTrip ? flight.precio_total : flight.costo_economico
-      ),
-      priceNumber: flight.isRoundTrip
-        ? flight.precio_total
-        : Number(flight.costo_economico) || 0,
-      costo_vip: flight.isRoundTrip
-        ? flight.precio_total_vip
-        : flight.costo_vip || Math.round(flight.costo_economico * 1.5),
+      price: formatPrice(flight.costo_economico), // 🔥 CORREGIDO
+      priceNumber: Number(flight.costo_economico) || 0, // 🔥 CORREGIDO
+      costo_vip: Number(flight.costo_vip) || 0, // 🔥 CORREGIDO
       duration: formatDuration(flight.duracion),
-      stops: flight.tipo_vuelo === "directo" ? "Directo" : "Directo",
+      stops: "Directo",
       departure: {
         city: flight.origen,
         airport: flight.origen,
         time: formatTime(flight.hora_salida),
         date: formatDate(flight.fecha_salida),
+        isInternational: !colombianCities.includes(flight.origen),
       },
       arrival: {
         city: flight.destino,
         airport: flight.destino,
-        time: calculateArrivalTime(
-          formatTime(flight.hora_salida),
-          flight.duracion
-        ),
-        date: formatDate(flight.fecha_salida),
+        time: llegadaIda.time,
+        date: formatDate(llegadaIda.date),
+        isInternational: !colombianCities.includes(flight.destino),
       },
-      // 🔥 NUEVO: Incluir información del vuelo de retorno si existe
       returnFlight: flight.returnFlight
         ? {
             flightNumber: `VS${flight.returnFlight.id_vuelo}`,
@@ -501,24 +1159,32 @@ function SearchFlights() {
               airport: flight.returnFlight.origen,
               time: formatTime(flight.returnFlight.hora_salida),
               date: formatDate(flight.returnFlight.fecha_salida),
+              isInternational: !colombianCities.includes(
+                flight.returnFlight.origen
+              ),
             },
             arrival: {
               city: flight.returnFlight.destino,
               airport: flight.returnFlight.destino,
-              time: calculateArrivalTime(
-                formatTime(flight.returnFlight.hora_salida),
-                flight.returnFlight.duracion
+              time: llegadaRetorno.time,
+              date: formatDate(llegadaRetorno.date),
+              isInternational: !colombianCities.includes(
+                flight.returnFlight.destino
               ),
-              date: formatDate(flight.returnFlight.fecha_salida),
             },
             duration: formatDuration(flight.returnFlight.duracion),
+            // 🔥 AGREGAR PRECIOS INDIVIDUALES AL VUELO DE RETORNO
+            priceNumber: Number(flight.returnFlight.costo_economico) || 0,
+            costo_vip: Number(flight.returnFlight.costo_vip) || 0,
           }
         : null,
       isRoundTrip: flight.isRoundTrip,
+      hasReturnFlight: flight.hasReturnFlight,
       searchParams: searchParams,
+      isInternational: isInternationalFlight(flight.origen, flight.destino),
     };
 
-    console.log("🛒 Item agregado al carrito:", cartItem);
+    console.log("🛒 Item agregado al carrito (CORREGIDO):", cartItem);
 
     // Obtener carrito actual del localStorage
     const currentCart = JSON.parse(
@@ -540,7 +1206,7 @@ function SearchFlights() {
     alert("✅ Vuelo agregado al carrito");
   };
 
-  // 🔥 NUEVA FUNCIÓN: Obtener contador del carrito
+  // 🔥 FUNCIÓN: Obtener contador del carrito
   const getCartItemCount = () => {
     try {
       const cart = JSON.parse(localStorage.getItem("vivasky_cart") || "[]");
@@ -582,8 +1248,8 @@ function SearchFlights() {
             <div className="user-welcome">
               <span>Hola, {userName}</span>
 
-              {/* 🔥 MODIFICADO: Solo mostrar carrito si NO es admin */}
-              {!isAdminUser() && (
+              {/* 🔥 MOSTRAR CARRITO SOLO SI PUEDE USARLO */}
+              {canUseCart() && (
                 <button
                   className="nav-btn cart-btn"
                   onClick={() => navigate("/cart")}
@@ -612,7 +1278,6 @@ function SearchFlights() {
           )}
         </nav>
 
-        {/* ✅ CORREGIDO: Botón Nueva Búsqueda */}
         <button className="back-btn" onClick={handleNewSearch}>
           Nueva Búsqueda
         </button>
@@ -623,25 +1288,33 @@ function SearchFlights() {
         <div className="search-header">
           <h2>✈️ Resultados de búsqueda</h2>
           <div className="search-summary">
+            <div className="search-description">
+              <h3>{getSearchTypeDescription()}</h3>
+            </div>
             <div className="search-params">
-              <span>
-                <strong>Origen:</strong> {searchParams.origin || "—"}
-              </span>
-              <span>
-                <strong>Destino:</strong> {searchParams.destination || "—"}
-              </span>
-              <span>
-                <strong>Fecha salida:</strong>{" "}
-                {formatDate(
-                  searchParams.departureDateSQL || searchParams.departureDate
-                ) || "—"}
-              </span>
-              {searchParams.tripType === "roundtrip" && (
+              {searchParams.origin && (
                 <span>
-                  <strong>Fecha regreso:</strong>{" "}
-                  {formatDate(searchParams.returnDate) || "—"}
+                  <strong>Origen:</strong> {searchParams.origin}
                 </span>
               )}
+              {searchParams.destination && (
+                <span>
+                  <strong>Destino:</strong> {searchParams.destination}
+                </span>
+              )}
+              {searchParams.departureDate && (
+                <span>
+                  <strong>Fecha salida:</strong>{" "}
+                  {formatDate(searchParams.departureDate)}
+                </span>
+              )}
+              {searchParams.tripType === "roundtrip" &&
+                searchParams.returnDate && (
+                  <span>
+                    <strong>Fecha regreso:</strong>{" "}
+                    {formatDate(searchParams.returnDate)}
+                  </span>
+                )}
               <span>
                 <strong>Tipo:</strong>{" "}
                 {searchParams.tripType === "roundtrip"
@@ -675,57 +1348,62 @@ function SearchFlights() {
             <div className="results-info">
               <h3>Vuelos disponibles ({flights.length})</h3>
               <p>
-                Selecciona un vuelo para continuar con tu reserva o agrégalo al
-                carrito
+                Selecciona un vuelo para continuar con tu reserva
+                {canUseCart() && " o agrégalo al carrito"}
               </p>
             </div>
 
             <div className="flights-grid-enhanced">
               {flights.length > 0 ? (
                 flights.map((flight) => {
-                  // Solo mostrar vuelos activos
-                  if (flight.estado !== "activo") return null;
-
                   const isRoundTrip = flight.isRoundTrip;
                   const hasReturnFlight =
                     flight.hasReturnFlight && flight.returnFlight;
-                  const fechaSalida = formatDate(flight.fecha_salida);
-                  const horaSalida = formatTime(flight.hora_salida);
-                  const horaLlegada = calculateArrivalTime(
-                    horaSalida,
-                    flight.duracion
+                  const isInternational = isInternationalFlight(
+                    flight.origen,
+                    flight.destino
                   );
+                  const missingReturn = flight.missingReturn; // Nueva propiedad
+
+                  // 🔥 CALCULAR LLEGADAS CON NUEVO SISTEMA
+                  const llegadaIda = calculateFinalArrival(flight, false);
+                  const llegadaRetorno = hasReturnFlight
+                    ? calculateFinalArrival(flight, true)
+                    : null;
+
+                  // 🔥 USAR FECHAS CORRECTAS
+                  const fechaSalida = formatDate(flight.fecha_salida);
+                  const fechaSalidaCorta = formatShortDate(flight.fecha_salida);
+                  const fechaLlegadaCorta = formatShortDate(llegadaIda.date);
+                  const horaSalida = formatTime(flight.hora_salida);
+
                   const duracion = formatDuration(flight.duracion);
 
-                  // 🔥 NUEVO: Datos del vuelo de retorno REAL
+                  // 🔥 Datos del vuelo de retorno
                   const fechaRetorno = hasReturnFlight
                     ? formatDate(flight.returnFlight.fecha_salida)
+                    : "";
+                  const fechaRetornoCorta = hasReturnFlight
+                    ? formatShortDate(flight.returnFlight.fecha_salida)
+                    : "";
+                  const fechaLlegadaRetornoCorta = hasReturnFlight
+                    ? formatShortDate(llegadaRetorno.date)
                     : "";
                   const horaSalidaRetorno = hasReturnFlight
                     ? formatTime(flight.returnFlight.hora_salida)
                     : "";
-                  const horaLlegadaRetorno = hasReturnFlight
-                    ? calculateArrivalTime(
-                        horaSalidaRetorno,
-                        flight.returnFlight.duracion
-                      )
-                    : "";
+
                   const duracionRetorno = hasReturnFlight
                     ? formatDuration(flight.returnFlight.duracion)
                     : "";
 
-                  console.log("🎯 Vuelo renderizado:", {
-                    id: flight.id_vuelo,
-                    tipoViaje: flight.tripType,
-                    esIdaVuelta: isRoundTrip,
-                    tieneVuelta: hasReturnFlight,
-                  });
-
                   return (
                     <div
-                      key={flight.id_vuelo}
+                      key={flight.combinationId || flight.id_vuelo}
                       className={`flight-card-enhanced ${
                         isRoundTrip ? "with-return" : ""
+                      } ${isInternational ? "international-flight" : ""} ${
+                        missingReturn ? "missing-return" : ""
                       }`}
                     >
                       <div className="flight-card-header">
@@ -738,43 +1416,41 @@ function SearchFlights() {
                               {flight.id_vuelo}
                               {hasReturnFlight &&
                                 ` + VSK-${flight.returnFlight.id_vuelo}`}
+                              {isInternational && (
+                                <span className="international-badge">
+                                  🌍 Internacional
+                                </span>
+                              )}
                               {isRoundTrip && (
                                 <span className="round-trip-badge">
                                   {hasReturnFlight
                                     ? "Ida y Vuelta"
-                                    : "Ida y Vuelta*"}
+                                    : "Solo Ida (Falta regreso)"}
                                 </span>
                               )}
                             </span>
-                            {isRoundTrip && !hasReturnFlight && (
-                              <div
-                                style={{
-                                  fontSize: "12px",
-                                  color: "#e67e22",
-                                  marginTop: "5px",
-                                  fontStyle: "italic",
-                                }}
-                              >
-                                * Vuelo de retorno no disponible para esta fecha
-                              </div>
-                            )}
                           </div>
                         </div>
                         <div className="flight-price">
-                          {formatPrice(
-                            isRoundTrip
-                              ? flight.precio_total
-                              : flight.costo_economico
-                          )}
+                          {formatPrice(flight.precio_total)}
                           <span className="price-note">
-                            {isRoundTrip
-                              ? hasReturnFlight
-                                ? "económico (ida y vuelta)"
-                                : "económico (solo ida)"
+                            {isRoundTrip && hasReturnFlight
+                              ? "económico (ida y vuelta)"
                               : "económico"}
                           </span>
                         </div>
                       </div>
+
+                      {/* 🔥 ALERTA SI FALTA VUELO DE REGRESO */}
+                      {missingReturn && (
+                        <div className="missing-return-alert">
+                          <span>⚠️</span>
+                          <span>
+                            No encontramos vuelo de regreso para la fecha
+                            seleccionada
+                          </span>
+                        </div>
+                      )}
 
                       {/* VUELO DE IDA */}
                       <div className="flight-route">
@@ -784,7 +1460,7 @@ function SearchFlights() {
                             <div className="city">{flight.origen}</div>
                             <div className="airport">{flight.origen}</div>
                           </div>
-                          <div className="date">{fechaSalida}</div>
+                          <div className="date">{fechaSalidaCorta}</div>
                         </div>
 
                         <div className="route-middle">
@@ -793,20 +1469,17 @@ function SearchFlights() {
                             <div className="line"></div>
                             <div className="plane">✈️</div>
                           </div>
-                          <div className="stops">
-                            {flight.tipo_vuelo === "directo"
-                              ? "Directo"
-                              : "Directo"}
-                          </div>
+                          <div className="stops">Directo</div>
                         </div>
 
                         <div className="route-segment">
-                          <div className="time">{horaLlegada}</div>
+                          <div className="time">{llegadaIda.time}</div>
                           <div className="place">
                             <div className="city">{flight.destino}</div>
                             <div className="airport">{flight.destino}</div>
                           </div>
-                          <div className="date">{fechaSalida}</div>
+                          {/* 🔥 MOSTRAR FECHA CORRECTA DE LLEGADA */}
+                          <div className="date">{fechaLlegadaCorta}</div>
                         </div>
                       </div>
 
@@ -828,7 +1501,7 @@ function SearchFlights() {
                                   {flight.returnFlight.origen}
                                 </div>
                               </div>
-                              <div className="date">{fechaRetorno}</div>
+                              <div className="date">{fechaRetornoCorta}</div>
                             </div>
 
                             <div className="route-middle">
@@ -837,15 +1510,11 @@ function SearchFlights() {
                                 <div className="line"></div>
                                 <div className="plane">↩️</div>
                               </div>
-                              <div className="stops">
-                                {flight.returnFlight.tipo_vuelo === "directo"
-                                  ? "Directo"
-                                  : "Directo"}
-                              </div>
+                              <div className="stops">Directo</div>
                             </div>
 
                             <div className="route-segment">
-                              <div className="time">{horaLlegadaRetorno}</div>
+                              <div className="time">{llegadaRetorno.time}</div>
                               <div className="place">
                                 <div className="city">
                                   {flight.returnFlight.destino}
@@ -854,7 +1523,10 @@ function SearchFlights() {
                                   {flight.returnFlight.destino}
                                 </div>
                               </div>
-                              <div className="date">{fechaRetorno}</div>
+                              {/* 🔥 MOSTRAR FECHA CORRECTA DE LLEGADA */}
+                              <div className="date">
+                                {fechaLlegadaRetornoCorta}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -863,15 +1535,11 @@ function SearchFlights() {
                       <div className="flight-features">
                         <div className="feature">
                           <span>🎒</span>
-                          <span>23kg equipaje</span>
+                          <span>Equipaje</span>
                         </div>
                         <div className="feature">
                           <span>💺</span>
-                          <span>Asiento estándar</span>
-                        </div>
-                        <div className="feature">
-                          <span>🥤</span>
-                          <span>Refresco incluido</span>
+                          <span>Asiento</span>
                         </div>
                         {isRoundTrip && hasReturnFlight && (
                           <div className="feature">
@@ -879,6 +1547,7 @@ function SearchFlights() {
                             <span>Incluye vuelo de retorno</span>
                           </div>
                         )}
+                        {isInternational && <div className="feature"></div>}
                       </div>
 
                       <div className="flight-actions">
@@ -887,14 +1556,13 @@ function SearchFlights() {
                           onClick={() => handleSelectFlight(flight)}
                         >
                           ✈️{" "}
-                          {isRoundTrip
-                            ? hasReturnFlight
-                              ? "Seleccionar Ida y Vuelta"
-                              : "Seleccionar Solo Ida"
+                          {isRoundTrip && hasReturnFlight
+                            ? "Seleccionar Ida y Vuelta"
                             : "Seleccionar Vuelo"}
                         </button>
 
-                        {!isAdminUser() && (
+                        {/* 🔥 MOSTRAR BOTÓN CARRITO SOLO SI PUEDE USARLO */}
+                        {canUseCart() && (
                           <button
                             className="add-to-cart-btn"
                             onClick={() => handleAddToCart(flight)}
