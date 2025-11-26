@@ -21,7 +21,6 @@ import SearchFlights from "./SearchFlights";
 import ReserveFlight from "./ReserveFlight";
 import ManageFlights from "./ManageFlights";
 import Cart from "./Cart";
-import Payments from "./Payments";
 
 const App = () => {
   return (
@@ -39,7 +38,6 @@ const App = () => {
         <Route path="/reserve-flight" element={<ReserveFlight />} />
         <Route path="/manage-flights" element={<ManageFlights />} />
         <Route path="/cart" element={<Cart />} />
-        <Route path="/balance-payments" element={<Payments />} />
       </Routes>
     </Router>
   );
@@ -54,10 +52,13 @@ const HomePage = () => {
   const [returnDate, setReturnDate] = useState("");
   const [selectedDestination, setSelectedDestination] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [showReservationModal, setShowReservationModal] = useState(false); // Nuevo estado para modal de reserva
+  const [showReservationModal, setShowReservationModal] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
   const [welcomeMessage, setWelcomeMessage] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [availableOrigins, setAvailableOrigins] = useState([]);
+  const [availableDestinations, setAvailableDestinations] = useState([]);
+  const [loadingCities, setLoadingCities] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -66,111 +67,201 @@ const HomePage = () => {
   const logoUrl =
     "https://i.pinimg.com/736x/60/48/b4/6048b4ae7f74724389d345767e8061a0.jpg";
 
-  // Lista de ciudades colombianas (capitales departamentales)
+  // Lista de ciudades colombianas (capitales departamentales) - ORDENADA ALFABÉTICAMENTE
   const colombianCities = [
-    "Bogotá",
-    "Medellín",
-    "Cali",
+    "Arauca",
+    "Armenia",
     "Barranquilla",
+    "Bogotá",
+    "Bucaramanga",
+    "Cali",
     "Cartagena",
     "Cúcuta",
-    "Bucaramanga",
-    "Pereira",
-    "Santa Marta",
-    "Ibagué",
-    "Pasto",
-    "Manizales",
-    "Neiva",
-    "Villavicencio",
-    "Armenia",
-    "Valledupar",
-    "Montería",
-    "Sincelejo",
-    "Popayán",
-    "Riohacha",
-    "Tunja",
     "Florencia",
-    "Quibdó",
-    "Arauca",
-    "Yopal",
-    "Mocoa",
-    "San José del Guaviare",
+    "Ibagué",
     "Leticia",
-    "Mitú",
-    "Puerto Carreño",
-    "San Andrés",
-  ];
-
-  // Ciudades internacionales
-  const internationalCities = [
-    "Madrid",
-    "Londres",
-    "New York",
-    "Buenos Aires",
-    "Miami",
-  ];
-
-  // Ciudades colombianas que pueden acceder a destinos internacionales
-  const internationalGateways = [
-    "Pereira",
-    "Bogotá",
+    "Manizales",
     "Medellín",
+    "Mitú",
+    "Mocoa",
+    "Montería",
+    "Neiva",
+    "Pasto",
+    "Pereira",
+    "Popayán",
+    "Puerto Carreño",
+    "Quibdó",
+    "Riohacha",
+    "San Andrés",
+    "San José del Guaviare",
+    "Santa Marta",
+    "Sincelejo",
+    "Tunja",
+    "Valledupar",
+    "Villavicencio",
+    "Yopal",
+  ].sort(); // Orden alfabético
+
+  // Ciudades internacionales - ORDENADAS ALFABÉTICAMENTE
+  const internationalCities = [
+    "Buenos Aires",
+    "Londres",
+    "Madrid",
+    "Miami",
+    "New York",
+  ].sort(); // Orden alfabético
+
+  // Ciudades colombianas que pueden acceder a destinos internacionales - ORDENADAS ALFABÉTICAMENTE
+  const internationalGateways = [
+    "Bogotá",
     "Cali",
     "Cartagena",
-  ];
+    "Medellín",
+    "Pereira",
+  ].sort(); // Orden alfabético
 
-  // Todas las ciudades disponibles para origen (colombianas + internacionales)
-  const allOrigins = [...colombianCities, ...internationalCities];
+  // Función para ordenar arrays alfabéticamente
+  const sortAlphabetically = (array) => {
+    return array.sort((a, b) =>
+      a.localeCompare(b, "es", { sensitivity: "base" })
+    );
+  };
 
-  // Función para obtener destinos disponibles según el origen seleccionado
-  const getAvailableDestinations = (selectedOrigin) => {
-    if (!selectedOrigin) return [...colombianCities, ...internationalCities];
+  // 🔥 CORREGIDO: Función para obtener ciudades únicas - SIN LLAMADAS AL BACKEND
+  const fetchAvailableCities = async () => {
+    setLoadingCities(true);
+    try {
+      // 🔥 USAR SIEMPRE LAS CIUDADES POR DEFECTO - SIN LLAMAR AL BACKEND
+      const allCities = sortAlphabetically([
+        ...colombianCities,
+        ...internationalCities,
+      ]);
+      setAvailableOrigins(allCities);
+      setAvailableDestinations(allCities);
+    } catch (error) {
+      console.error("Error fetching cities:", error);
+      // Si hay error, usar las ciudades por defecto ya ordenadas
+      setAvailableOrigins(
+        sortAlphabetically([...colombianCities, ...internationalCities])
+      );
+      setAvailableDestinations(
+        sortAlphabetically([...colombianCities, ...internationalCities])
+      );
+    } finally {
+      setLoadingCities(false);
+    }
+  };
+
+  // 🔥 CORREGIDO: Función para obtener destinos disponibles según el origen seleccionado - SIN BACKEND
+  const fetchDestinationsByOrigin = async (selectedOrigin) => {
+    if (!selectedOrigin) {
+      setAvailableDestinations(
+        sortAlphabetically([...colombianCities, ...internationalCities])
+      );
+      return;
+    }
+
+    setLoadingCities(true);
+    try {
+      // 🔥 USAR DIRECTAMENTE LA LÓGICA LOCAL - SIN LLAMAR AL BACKEND
+      getAvailableDestinationsLocal(selectedOrigin);
+    } catch (error) {
+      console.error("Error fetching destinations:", error);
+      // Fallback a lógica local
+      getAvailableDestinationsLocal(selectedOrigin);
+    } finally {
+      setLoadingCities(false);
+    }
+  };
+
+  // 🔥 CORREGIDO: Función para obtener orígenes disponibles según el destino seleccionado - SIN BACKEND
+  const fetchOriginsByDestination = async (selectedDestination) => {
+    if (!selectedDestination) {
+      setAvailableOrigins(
+        sortAlphabetically([...colombianCities, ...internationalCities])
+      );
+      return;
+    }
+
+    setLoadingCities(true);
+    try {
+      // 🔥 USAR DIRECTAMENTE LA LÓGICA LOCAL - SIN LLAMAR AL BACKEND
+      getAvailableOriginsLocal(selectedDestination);
+    } catch (error) {
+      console.error("Error fetching origins:", error);
+      // Fallback a lógica local
+      getAvailableOriginsLocal(selectedDestination);
+    } finally {
+      setLoadingCities(false);
+    }
+  };
+
+  // Lógica local de respaldo para destinos
+  const getAvailableDestinationsLocal = (selectedOrigin) => {
+    if (!selectedOrigin) return;
+
+    let destinations = [];
 
     // Si el origen es una ciudad internacional, solo puede volar a ciudades gateway colombianas
     if (internationalCities.includes(selectedOrigin)) {
-      return internationalGateways;
+      destinations = internationalGateways;
     }
-
     // Si el origen es una ciudad gateway colombiana, puede volar a todas las ciudades (excepto sí misma)
-    if (internationalGateways.includes(selectedOrigin)) {
-      return [
+    else if (internationalGateways.includes(selectedOrigin)) {
+      destinations = [
         ...colombianCities.filter((city) => city !== selectedOrigin),
         ...internationalCities,
       ];
     }
-
     // Si el origen es una ciudad colombiana NO gateway, solo puede volar a ciudades colombianas (excepto sí misma)
-    return colombianCities.filter((city) => city !== selectedOrigin);
+    else {
+      destinations = colombianCities.filter((city) => city !== selectedOrigin);
+    }
+
+    // Ordenar alfabéticamente antes de establecer el estado
+    setAvailableDestinations(sortAlphabetically(destinations));
+  };
+
+  // Lógica local de respaldo para orígenes
+  const getAvailableOriginsLocal = (selectedDestination) => {
+    if (!selectedDestination) return;
+
+    let origins = [];
+
+    // Si el destino es una ciudad internacional, solo las ciudades gateway colombianas pueden volar allí
+    if (internationalCities.includes(selectedDestination)) {
+      origins = internationalGateways;
+    }
+    // Si el destino es una ciudad gateway colombiana, puede recibir vuelos de todas las ciudades (excepto sí misma)
+    else if (internationalGateways.includes(selectedDestination)) {
+      origins = [
+        ...colombianCities.filter((city) => city !== selectedDestination),
+        ...internationalCities,
+      ];
+    }
+    // Si el destino es una ciudad colombiana NO gateway, solo puede recibir vuelos de ciudades colombianas (excepto sí misma)
+    else {
+      origins = colombianCities.filter((city) => city !== selectedDestination);
+    }
+
+    // Ordenar alfabéticamente antes de establecer el estado
+    setAvailableOrigins(sortAlphabetically(origins));
   };
 
   // Función para validar si una ruta es permitida
   const isValidRoute = (originCity, destinationCity) => {
-    // Si el origen es internacional, solo puede volar a ciudades gateway colombianas
-    if (internationalCities.includes(originCity)) {
-      return internationalGateways.includes(destinationCity);
-    }
+    // Si no hay origen o destino seleccionado, la ruta es válida (búsqueda individual)
+    if (!originCity || !destinationCity) return true;
 
-    // Si el destino es colombiano, cualquier origen colombiano puede ir allí
-    if (colombianCities.includes(destinationCity)) {
-      return true;
-    }
+    // Verificar si la ruta existe en las opciones disponibles
+    const isOriginAvailable = availableOrigins.includes(originCity);
+    const isDestinationAvailable =
+      availableDestinations.includes(destinationCity);
 
-    // Si el destino es internacional, solo los gateways colombianos pueden ir allí
-    if (internationalCities.includes(destinationCity)) {
-      return internationalGateways.includes(originCity);
-    }
-
-    return false;
+    return isOriginAvailable && isDestinationAvailable;
   };
 
-  // Función para obtener el tipo de ciudad
-  const getCityType = (city) => {
-    if (internationalCities.includes(city)) return "international";
-    if (internationalGateways.includes(city)) return "gateway";
-    return "colombian";
-  };
-
-  // Función para mostrar el mensaje de "próximamente" - MODIFICADA
+  // Función para mostrar el mensaje de "próximamente"
   const handleComingSoon = () => {
     alert("Esta funcionalidad estará activa próximamente");
   };
@@ -236,7 +327,7 @@ const HomePage = () => {
         setUserInfo({
           nombre: user.nombre,
           correo: user.correo,
-          role: user.tipo_usuario || user.role || "Usuario", // Asegurar que tenga un valor por defecto
+          role: user.tipo_usuario || user.role || "Usuario",
         });
         setIsAuthenticated(true);
         return true;
@@ -251,6 +342,7 @@ const HomePage = () => {
   // Efecto para manejar la información del usuario al cargar
   useEffect(() => {
     checkAuth();
+    fetchAvailableCities();
 
     // Verificar si hay mensaje de bienvenida después del login
     if (location.state?.message) {
@@ -262,21 +354,73 @@ const HomePage = () => {
     }
   }, [location.state]);
 
-  // Inicializar fechas al cargar el componente
-  useEffect(() => {
-    const today = getLocalDate(new Date());
-    const nextWeek = getLocalDate(new Date());
-    nextWeek.setDate(today.getDate() + 7);
+  // Obtener la fecha mínima para los inputs (hoy)
+  const today = formatDateForInput(getLocalDate(new Date()));
 
-    setDepartureDate(formatDateForInput(today));
-    setReturnDate(formatDateForInput(nextWeek));
-  }, []);
+  // Efecto para actualizar destinos cuando cambia el origen
+  useEffect(() => {
+    if (origin) {
+      fetchDestinationsByOrigin(origin);
+    } else {
+      setAvailableDestinations(
+        sortAlphabetically([...colombianCities, ...internationalCities])
+      );
+    }
+  }, [origin]);
+
+  // Efecto para actualizar orígenes cuando cambia el destino
+  useEffect(() => {
+    if (destination) {
+      fetchOriginsByDestination(destination);
+    } else {
+      setAvailableOrigins(
+        sortAlphabetically([...colombianCities, ...internationalCities])
+      );
+    }
+  }, [destination]);
+
+  // NUEVA FUNCIÓN: Verificar si hay ciudades internacionales en una lista
+  const hasInternationalCities = (citiesList) => {
+    return citiesList.some((city) => internationalCities.includes(city));
+  };
+
+  // NUEVA FUNCIÓN: Filtrar ciudades colombianas de una lista
+  const getColombianCities = (citiesList) => {
+    return citiesList.filter((city) => colombianCities.includes(city));
+  };
+
+  // NUEVA FUNCIÓN: Filtrar ciudades internacionales de una lista
+  const getInternationalCities = (citiesList) => {
+    return citiesList.filter((city) => internationalCities.includes(city));
+  };
+
+  // NUEVA FUNCIÓN: Validar que al menos un campo esté lleno
+  const hasAtLeastOneField = () => {
+    return origin || destination || departureDate || returnDate;
+  };
+
+  // NUEVA FUNCIÓN: Obtener el tipo de búsqueda basado en los campos llenos
+  const getSearchType = () => {
+    if (origin && destination && departureDate) {
+      return "completa";
+    } else if (origin && !destination && !departureDate && !returnDate) {
+      return "por-origen";
+    } else if (!origin && destination && !departureDate && !returnDate) {
+      return "por-destino";
+    } else if (!origin && !destination && departureDate && !returnDate) {
+      return "por-fecha-salida";
+    } else if (!origin && !destination && !departureDate && returnDate) {
+      return "por-fecha-retorno";
+    } else {
+      return "combinada";
+    }
+  };
 
   const popularDestinations = [
     {
       name: "Madrid",
       image:
-        "https://i.pinimg.com/736x/94/a1/7b/94a17b9195902697d977665eca20cc2f.jpg",
+        "https://i.pinimg.com/1200x/2c/b8/a9/2cb8a9190321ee91cdf63cca2d45668f.jpg",
       description:
         "Madrid, la capital de España, es conocida por su rica herencia cultural, edificios históricos y vida nocturna vibrante.",
       price: "****",
@@ -305,58 +449,76 @@ const HomePage = () => {
     },
   ];
 
+  // 🔥 FUNCIÓN MODIFICADA: Manejar búsqueda con parámetros mejorados
   const handleSearch = async (e) => {
     e.preventDefault();
 
-    // Validar que se hayan seleccionado origen y destino
-    if (!origin || !destination) {
-      alert("Por favor selecciona una ciudad de origen y destino");
+    // Validar que al menos un campo esté lleno
+    if (!hasAtLeastOneField()) {
+      alert("Por favor completa al menos un campo para buscar vuelos");
       return;
     }
 
-    // Validar si la ruta es permitida
-    if (!isValidRoute(origin, destination)) {
-      const originType = getCityType(origin);
-      const destinationType = getCityType(destination);
-
-      if (originType === "international") {
-        alert(
-          `Lo sentimos. Desde ${origin} solo hay vuelos disponibles hacia las ciudades gateway colombianas: Pereira, Bogotá, Medellín, Cali y Cartagena.`
-        );
-      } else if (destinationType === "international") {
-        alert(
-          `Lo sentimos. Desde ${origin} no hay vuelos disponibles hacia ${destination}. Solo las ciudades de Pereira, Bogotá, Medellín, Cali y Cartagena pueden volar a destinos internacionales.`
-        );
-      } else {
-        alert(
-          `Lo sentimos. No hay vuelos disponibles desde ${origin} hacia ${destination}.`
-        );
-      }
+    // Validar si hay origen y destino seleccionados, que la ruta sea permitida
+    if (origin && destination && !isValidRoute(origin, destination)) {
+      alert(
+        `Lo sentimos. No hay vuelos disponibles desde ${origin} hacia ${destination}.`
+      );
       return;
     }
 
-    // Validación de fechas solo para viajes redondos
+    // Validación de fechas solo para viajes redondos cuando ambas fechas están presentes
     if (
       tripType === "roundtrip" &&
+      departureDate &&
+      returnDate &&
       new Date(returnDate) < new Date(departureDate)
     ) {
       alert("La fecha de retorno no puede ser anterior a la fecha de salida");
       return;
     }
 
-    const departureDateSQL = new Date(departureDate)
-      .toISOString()
-      .split("T")[0];
+    const departureDateSQL = departureDate
+      ? new Date(departureDate).toISOString().split("T")[0]
+      : null;
 
-    // 🔥 IMPORTANTE: Incluir tripType y returnDate en state
+    const returnDateSQL =
+      returnDate && tripType === "roundtrip"
+        ? new Date(returnDate).toISOString().split("T")[0]
+        : null;
+
+    const searchType = getSearchType();
+
+    // 🔥 MODIFICADO: Enviar parámetros mejorados para búsqueda flexible
     navigate("/search-flights", {
       state: {
+        // Parámetros originales (compatibilidad)
         origin,
         destination,
         departureDate,
         departureDateSQL,
-        returnDate: tripType === "roundtrip" ? returnDate : null, // 🔥 NUEVO
-        tripType, // 🔥 NUEVO
+        returnDate: tripType === "roundtrip" ? returnDate : null,
+        tripType,
+        searchType,
+
+        // 🔥 NUEVOS PARÁMETROS PARA BÚSQUEDA FLEXIBLE
+        searchParams: {
+          origen: origin,
+          destino: destination,
+          fecha_salida: departureDateSQL,
+          fecha_regreso: returnDateSQL,
+          tipo_viaje: tripType === "roundtrip" ? "idayvuelta" : "soloida",
+        },
+
+        // 🔥 INFORMACIÓN ADICIONAL PARA MEJORAR LA BÚSQUEDA
+        searchContext: {
+          hasOrigin: !!origin,
+          hasDestination: !!destination,
+          hasDepartureDate: !!departureDate,
+          hasReturnDate: !!returnDate,
+          isFlexibleSearch: !origin || !destination || !departureDate,
+          searchMode: tripType === "roundtrip" ? "roundtrip" : "oneway",
+        },
       },
     });
   };
@@ -367,6 +529,7 @@ const HomePage = () => {
 
     if (
       tripType === "roundtrip" &&
+      returnDate &&
       new Date(returnDate) < new Date(newDepartureDate)
     ) {
       setReturnDate(newDepartureDate);
@@ -377,8 +540,18 @@ const HomePage = () => {
     setReturnDate(e.target.value);
   };
 
+  // NUEVAS FUNCIONES: Manejar cambios en origen y destino
+  const handleOriginChange = (e) => {
+    const newOrigin = e.target.value;
+    setOrigin(newOrigin);
+  };
+
+  const handleDestinationChange = (e) => {
+    const newDestination = e.target.value;
+    setDestination(newDestination);
+  };
+
   const handleDestinationClick = (dest) => {
-    // Mostrar modal directamente sin requerir autenticación
     setSelectedDestination(dest);
     setShowModal(true);
   };
@@ -393,7 +566,6 @@ const HomePage = () => {
   };
 
   const handleLogout = () => {
-    // Limpiar información de autenticación
     localStorage.removeItem("authToken");
     localStorage.removeItem("userData");
     localStorage.removeItem("userEmail");
@@ -405,9 +577,6 @@ const HomePage = () => {
     setWelcomeMessage("");
     alert("Has cerrado sesión exitosamente");
   };
-
-  // Obtener la fecha mínima para los inputs (hoy)
-  const today = formatDateForInput(getLocalDate(new Date()));
 
   return (
     <div className="app">
@@ -422,14 +591,12 @@ const HomePage = () => {
           <span className="logo-text">VivaSky</span>
         </div>
 
-        {/* Mostrar información del usuario si está logeado - CON MENÚ DESPLEGABLE */}
+        {/* Mostrar información del usuario si está logeado */}
         {isAuthenticated && userInfo ? (
           <UserMenu userInfo={userInfo} onLogout={handleLogout} />
         ) : (
           <nav className="navigation">
             <a href="#" onClick={handleReservarClick}>
-              {" "}
-              {/* MODIFICADO: Ahora abre el modal */}
               Reservas
             </a>
             <a href="#" onClick={handleComingSoon}>
@@ -485,27 +652,31 @@ const HomePage = () => {
             </div>
 
             <div className="form-fields">
+              {/* ORIGEN */}
               <div className="input-group">
                 <label>Salida</label>
                 <select
                   value={origin}
-                  onChange={(e) => {
-                    setOrigin(e.target.value);
-                    setDestination(""); // Reset destination when origin changes
-                  }}
-                  required
-                  className={!origin ? "required-empty" : ""}
+                  onChange={handleOriginChange}
+                  className={!origin ? "optional-field" : ""}
+                  disabled={loadingCities}
                 >
-                  <option value="">Selecciona una ciudad de origen</option>
-                  <optgroup label="🌍 Ciudades Internacionales">
-                    {internationalCities.map((city) => (
-                      <option key={city} value={city}>
-                        {city}
-                      </option>
-                    ))}
-                  </optgroup>
+                  <option value="">Cualquier ciudad de origen</option>
+
+                  {/* MOSTRAR CIUDADES INTERNACIONALES SOLO SI HAY */}
+                  {hasInternationalCities(availableOrigins) && (
+                    <optgroup label="🌍 Ciudades Internacionales">
+                      {getInternationalCities(availableOrigins).map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+
+                  {/* MOSTRAR SIEMPRE CIUDADES COLOMBIANAS */}
                   <optgroup label="🇨🇴 Ciudades Colombianas">
-                    {colombianCities.map((city) => (
+                    {getColombianCities(availableOrigins).map((city) => (
                       <option key={city} value={city}>
                         {city}
                         {internationalGateways.includes(city) && ""}
@@ -513,68 +684,84 @@ const HomePage = () => {
                     ))}
                   </optgroup>
                 </select>
+                {loadingCities && (
+                  <small
+                    style={{
+                      color: "#0077b6",
+                      fontSize: "12px",
+                      marginTop: "5px",
+                    }}
+                  >
+                    🔄 Cargando opciones...
+                  </small>
+                )}
+                {origin && (
+                  <small
+                    style={{
+                      color: "#28a745",
+                      fontSize: "12px",
+                      marginTop: "5px",
+                    }}
+                  >
+                    ✅ {availableDestinations.length} destinos disponibles
+                  </small>
+                )}
               </div>
 
+              {/* DESTINO */}
               <div className="input-group">
                 <label>Destino</label>
                 <select
                   value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
-                  required
-                  className={!destination ? "required-empty" : ""}
-                  disabled={!origin}
+                  onChange={handleDestinationChange}
+                  className={!destination ? "optional-field" : ""}
+                  disabled={loadingCities}
                 >
-                  <option value="">
-                    {origin
-                      ? `Selecciona un destino desde ${origin}`
-                      : "Primero selecciona un origen"}
-                  </option>
-                  {origin && (
-                    <>
-                      {getAvailableDestinations(origin).some((city) =>
-                        internationalCities.includes(city)
-                      ) && (
-                        <optgroup label="🌍 Destinos Internacionales">
-                          {getAvailableDestinations(origin)
-                            .filter((city) =>
-                              internationalCities.includes(city)
-                            )
-                            .map((city) => (
-                              <option key={city} value={city}>
-                                {city}
-                              </option>
-                            ))}
-                        </optgroup>
+                  <option value="">Cualquier ciudad de destino</option>
+
+                  {/* MOSTRAR DESTINOS INTERNACIONALES SOLO SI HAY */}
+                  {hasInternationalCities(availableDestinations) && (
+                    <optgroup label="🌍 Destinos Internacionales">
+                      {getInternationalCities(availableDestinations).map(
+                        (city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        )
                       )}
-                      <optgroup label="🇨🇴 Destinos Colombianos">
-                        {getAvailableDestinations(origin)
-                          .filter((city) => colombianCities.includes(city))
-                          .map((city) => (
-                            <option key={city} value={city}>
-                              {city}
-                              {internationalGateways.includes(city) && " "}
-                            </option>
-                          ))}
-                      </optgroup>
-                    </>
+                    </optgroup>
                   )}
+
+                  {/* MOSTRAR SIEMPRE DESTINOS COLOMBIANOS */}
+                  <optgroup label="🇨🇴 Destinos Colombianos">
+                    {getColombianCities(availableDestinations).map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                        {internationalGateways.includes(city) && ""}
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
-                {origin && (
+                {loadingCities && (
                   <small
                     style={{
-                      color: internationalCities.includes(origin)
-                        ? "#28a745"
-                        : "#0077b6",
+                      color: "#0077b6",
                       fontSize: "12px",
                       marginTop: "5px",
-                      display: "block",
                     }}
                   >
-                    {internationalCities.includes(origin)
-                      ? `✅ Desde ${origin} puedes volar a ciudades gateway colombianas`
-                      : internationalGateways.includes(origin)
-                      ? "✅ Puedes volar a destinos nacionales e internacionales"
-                      : "✅ Puedes volar a destinos nacionales"}
+                    🔄 Cargando opciones...
+                  </small>
+                )}
+                {destination && (
+                  <small
+                    style={{
+                      color: "#28a745",
+                      fontSize: "12px",
+                      marginTop: "5px",
+                    }}
+                  >
+                    ✅ {availableOrigins.length} orígenes disponibles
                   </small>
                 )}
               </div>
@@ -586,6 +773,7 @@ const HomePage = () => {
                   value={departureDate}
                   onChange={handleDepartureDateChange}
                   min={today}
+                  placeholder="Cualquier fecha"
                 />
               </div>
 
@@ -596,14 +784,21 @@ const HomePage = () => {
                     type="date"
                     value={returnDate}
                     onChange={handleReturnDateChange}
-                    min={departureDate}
+                    min={departureDate || today}
+                    placeholder="Cualquier fecha"
                   />
                 </div>
               )}
             </div>
 
-            <button type="submit" className="search-btn">
-              Buscar vuelos
+            <button
+              type="submit"
+              className="search-btn"
+              disabled={!hasAtLeastOneField()}
+            >
+              {!hasAtLeastOneField()
+                ? "Completa al menos un campo"
+                : "Buscar vuelos"}
             </button>
           </form>
         </div>
@@ -685,7 +880,7 @@ const HomePage = () => {
         </div>
       )}
 
-      {/* NUEVO MODAL: Para reservar sin estar autenticado */}
+      {/* Modal de reserva */}
       {showReservationModal && (
         <div className="modal-overlay" onClick={closeReservationModal}>
           <div
