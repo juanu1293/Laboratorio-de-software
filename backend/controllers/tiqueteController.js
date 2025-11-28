@@ -5,11 +5,11 @@ const db = require("../db");
 // ======================================================
 exports.reservarVuelo = async (req, res) => {
   try {
-    const { idvuelo, idcliente, clase } = req.body;
+    const { idvuelo, idcliente, clase, tipo, conexion } = req.body;
 
-    if (!idvuelo || !idcliente || !clase) {
+    if (!idvuelo || !idcliente || !clase || !tipo || !conexion) {
       return res.status(400).json({
-        mensaje: "Faltan datos obligatorios (idvuelo, idcliente, clase)"
+        mensaje: "Faltan datos obligatorios (idvuelo, idcliente, clase, tipo, conexion)"
       });
     }
 
@@ -39,10 +39,11 @@ exports.reservarVuelo = async (req, res) => {
       [asientoAsignado]
     );
 
-    // 4️⃣ Crear tiquete
+    // 4️⃣ Crear tiquete (✅ con tipo y conexion)
     const insertTiquete = `
-      INSERT INTO usuario.tiquete (idvuelo, idcliente, clase, estado, idasiento)
-      VALUES ($1, $2, $3, 'reservado', $4)
+      INSERT INTO usuario.tiquete 
+      (idvuelo, idcliente, clase, estado, idasiento, tipo, conexion)
+      VALUES ($1, $2, $3, 'reservado', $4, $5, $6)
       RETURNING idtiquete
     `;
 
@@ -50,21 +51,22 @@ exports.reservarVuelo = async (req, res) => {
       idvuelo,
       idcliente,
       clase,
-      asientoAsignado
+      asientoAsignado,
+      tipo,
+      conexion
     ]);
 
     const idtiquete = resultTiquete.rows[0].idtiquete;
 
     // ======================================================
-    //  🛒 GUARDAR EN CARRITO (NUEVA PARTE)
+    //  🛒 GUARDAR EN CARRITO
     // ======================================================
     const insertCarrito = `
       INSERT INTO usuario.carrito (idcliente, idtiquete, horacreacion)
       VALUES ($1, $2, NOW())
-      RETURNING idcarrito
     `;
 
-    const resultCarrito = await db.query(insertCarrito, [
+    await db.query(insertCarrito, [
       idcliente,
       idtiquete
     ]);
@@ -76,7 +78,8 @@ exports.reservarVuelo = async (req, res) => {
       mensaje: "Tiquete reservado y agregado al carrito",
       idtiquete,
       idasiento: asientoAsignado,
-      idcarrito: resultCarrito.rows[0].idcarrito
+      tipo,
+      conexion
     });
 
   } catch (error) {
