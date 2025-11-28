@@ -43,6 +43,9 @@ app.use("/api/search-flights", searchFlightsRoutes);
 const tiqueteRoutes = require("./routes/tiqueteRoutes");
 app.use("/api/tiquetes", tiqueteRoutes);
 
+const carritoRoutes = require("./routes/carritoRoutes");
+app.use("/api/carrito", carritoRoutes);
+
 // Puerto
 const PORT = process.env.PORT || 5000;
 
