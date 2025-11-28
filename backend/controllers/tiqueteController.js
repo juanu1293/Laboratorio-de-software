@@ -1,7 +1,7 @@
 const db = require("../db");
 
 // ======================================================
-//  📌 Crear una reserva de vuelo
+//  📌 Crear una reserva de vuelo + agregar al carrito
 // ======================================================
 exports.reservarVuelo = async (req, res) => {
   try {
@@ -53,10 +53,30 @@ exports.reservarVuelo = async (req, res) => {
       asientoAsignado
     ]);
 
+    const idtiquete = resultTiquete.rows[0].idtiquete;
+
+    // ======================================================
+    //  🛒 GUARDAR EN CARRITO (NUEVA PARTE)
+    // ======================================================
+    const insertCarrito = `
+      INSERT INTO usuario.carrito (idcliente, idtiquete, horacreacion)
+      VALUES ($1, $2, NOW())
+      RETURNING idcarrito
+    `;
+
+    const resultCarrito = await db.query(insertCarrito, [
+      idcliente,
+      idtiquete
+    ]);
+
+    // ======================================================
+    //  ✅ RESPUESTA FINAL
+    // ======================================================
     return res.status(201).json({
-      mensaje: "Tiquete reservado exitosamente",
-      idtiquete: resultTiquete.rows[0].idtiquete,
-      idasiento: asientoAsignado
+      mensaje: "Tiquete reservado y agregado al carrito",
+      idtiquete,
+      idasiento: asientoAsignado,
+      idcarrito: resultCarrito.rows[0].idcarrito
     });
 
   } catch (error) {
