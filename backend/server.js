@@ -40,6 +40,8 @@ app.use("/api/cards", cardRoutes);
 const searchFlightsRoutes = require("./routes/searchFlightRoutes");
 app.use("/api/search-flights", searchFlightsRoutes);
 
+const tiqueteRoutes = require("./routes/tiqueteRoutes");
+app.use("/api/tiquetes", tiqueteRoutes);
 
 // Puerto
 const PORT = process.env.PORT || 5000;
