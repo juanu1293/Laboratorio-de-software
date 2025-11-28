@@ -87,7 +87,7 @@ exports.createFlight = async (req, res) => {
 
     // Crear asientos con número tipo VARCHAR(5)
     for (let i = 1; i <= totalAsientos; i++) {
-      const clase = i <= primeraClaseLimite ? "primera clase" : "clase economica";
+      const clase = i <= primeraClaseLimite ? "vip" : "clase economica";
 
       // Genera string de 5 caracteres: 1 → "00001"
       const numeroAsiento = String(i).padStart(5, "0");
@@ -130,5 +130,6 @@ exports.createFlight = async (req, res) => {
     });
   }
 };
+
 
 
