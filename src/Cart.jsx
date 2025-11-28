@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./App.css";
+import "./Cart.css";
 
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -12,6 +13,111 @@ const Cart = () => {
   const [departureDate, setDepartureDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const navigate = useNavigate();
+
+  // 🔥 NUEVA FUNCIÓN: Procesar compra directa
+  const proceedToPurchase = (flight) => {
+    // Preparar los datos del vuelo para la compra directa
+    const purchaseFlight = {
+      ...flight,
+      selectedClass: flight.selectedClass || "economica",
+      ticketQuantity: flight.ticketQuantity || 1,
+      priceNumber: Number(flight.priceNumber) || 0,
+      costo_vip: Number(flight.costo_vip) || 0,
+    };
+
+    console.log("🛒 Redirigiendo a compra directa:", purchaseFlight);
+
+    // Navegar directamente a la página de compra
+    navigate("/purchase-flight", {
+      state: {
+        flight: purchaseFlight,
+        fromCart: true,
+        cartItemId: flight.id, // Para poder eliminar del carrito después de comprar
+      },
+    });
+  };
+
+  // 🔥 NUEVA FUNCIÓN: Verificar y limpiar reservas expiradas
+  const checkAndCleanExpiredReservations = () => {
+    try {
+      const currentCart = JSON.parse(
+        localStorage.getItem("vivasky_cart") || "[]"
+      );
+      const now = new Date();
+
+      const validReservations = currentCart.filter((item) => {
+        if (item.reservationType === "temporal" && item.expiresAt) {
+          const expirationDate = new Date(item.expiresAt);
+          return expirationDate > now; // Mantener solo las que no han expirado
+        }
+        return true; // Mantener todos los items que no son reservas temporales
+      });
+
+      if (validReservations.length !== currentCart.length) {
+        localStorage.setItem("vivasky_cart", JSON.stringify(validReservations));
+        console.log("🔄 Reservas expiradas eliminadas del carrito");
+      }
+
+      return validReservations;
+    } catch (error) {
+      console.error("❌ Error limpiando reservas expiradas:", error);
+      return [];
+    }
+  };
+
+  // 🔥 NUEVA FUNCIÓN: Actualizar tiempo restante de las reservas
+  const updateReservationTimers = () => {
+    try {
+      const currentCart = JSON.parse(
+        localStorage.getItem("vivasky_cart") || "[]"
+      );
+      const now = new Date();
+      let needsUpdate = false;
+
+      const updatedCart = currentCart
+        .map((item) => {
+          if (item.reservationType === "temporal" && item.expiresAt) {
+            const expirationDate = new Date(item.expiresAt);
+            const timeDiff = expirationDate - now;
+
+            if (timeDiff <= 0) {
+              return null; // Eliminar reserva expirada
+            }
+
+            // Calcular tiempo restante en formato HH:MM:SS
+            const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+            const minutes = Math.floor(
+              (timeDiff % (1000 * 60 * 60)) / (1000 * 60)
+            );
+            const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+            const newTimeLeft = `${hours.toString().padStart(2, "0")}:${minutes
+              .toString()
+              .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+
+            if (item.timeLeft !== newTimeLeft) {
+              needsUpdate = true;
+              return {
+                ...item,
+                timeLeft: newTimeLeft,
+              };
+            }
+          }
+          return item;
+        })
+        .filter((item) => item !== null); // Filtrar nulls (reservas expiradas)
+
+      if (needsUpdate) {
+        localStorage.setItem("vivasky_cart", JSON.stringify(updatedCart));
+        setCartItems(updatedCart); // 🔥 Actualizar estado
+      }
+
+      return updatedCart;
+    } catch (error) {
+      console.error("❌ Error actualizando timers:", error);
+      return [];
+    }
+  };
 
   // Lista de ciudades (la misma que en App.jsx)
   const colombianCities = [
@@ -67,11 +173,9 @@ const Cart = () => {
   const allOrigins = [...colombianCities, ...internationalCities];
 
   useEffect(() => {
-    // Cargar items del carrito desde localStorage
-    const savedCart = localStorage.getItem("vivasky_cart");
-    if (savedCart) {
-      setCartItems(JSON.parse(savedCart));
-    }
+    // 🔥 MODIFICADO: Verificar reservas expiradas antes de cargar
+    const validCart = checkAndCleanExpiredReservations();
+    setCartItems(validCart);
 
     // Cargar información del usuario
     const userData =
@@ -87,6 +191,13 @@ const Cart = () => {
 
     setDepartureDate(formatDateForInput(today));
     setReturnDate(formatDateForInput(nextWeek));
+
+    // 🔥 NUEVO: Actualizar timers cada segundo
+    const timerInterval = setInterval(() => {
+      updateReservationTimers();
+    }, 1000);
+
+    return () => clearInterval(timerInterval);
   }, []);
 
   // Funciones auxiliares para fechas
@@ -155,7 +266,7 @@ const Cart = () => {
   };
 
   const handleBackToSearch = () => {
-    navigate("/search-flights");
+    navigate("/reserve-flight");
   };
 
   const handleContinueShopping = () => {
@@ -220,6 +331,34 @@ const Cart = () => {
     return "2h 00m";
   };
 
+  // 🔥 NUEVA FUNCIÓN: Obtener tipo de item (reserva temporal o compra)
+  const getItemType = (item) => {
+    if (item.reservationType === "temporal") {
+      return "reserva";
+    } else if (item.purchaseType === "immediate") {
+      return "compra";
+    }
+    return "item";
+  };
+
+  // 🔥 NUEVA FUNCIÓN: Obtener texto de expiración
+  const getExpirationText = (item) => {
+    if (item.reservationType === "temporal" && item.timeLeft) {
+      return `Expira en: ${item.timeLeft}`;
+    }
+    return null;
+  };
+
+  // 🔥 NUEVA FUNCIÓN: Obtener badge de estado
+  const getStatusBadge = (item) => {
+    if (item.reservationType === "temporal") {
+      return <span className="status-badge reserved">⏰ Reservado</span>;
+    } else if (item.purchaseType === "immediate") {
+      return <span className="status-badge purchased">✅ Comprado</span>;
+    }
+    return null;
+  };
+
   const today = formatDateForInput(getLocalDate(new Date()));
 
   return (
@@ -243,16 +382,12 @@ const Cart = () => {
             {userInfo ? `Hola, ${userInfo.nombre}` : "Mi Carrito"}
           </span>
         </div>
-
-        <button className="back-btn" onClick={handleBackToSearch}>
-          Volver a búsqueda
-        </button>
       </header>
 
       <div className="cart-container">
         <div className="cart-header">
           <h1>🛒 Mi Carrito de Viajes</h1>
-          <p>Revisa y gestiona tus vuelos seleccionados</p>
+          <p>Revisa y gestiona tus vuelos reservados o comprados aquí</p>
         </div>
 
         {cartItems.length === 0 ? (
@@ -272,7 +407,8 @@ const Cart = () => {
             <div className="cart-summary">
               <div className="cart-stats">
                 <span className="cart-count">
-                  {getTotalItems()} vuelo(s) guardado(s)
+                  {getTotalItems()} {getTotalItems() === 1 ? "vuelo" : "vuelos"}{" "}
+                  guardado(s)
                 </span>
                 <span className="cart-total">
                   Total:{" "}
@@ -293,7 +429,11 @@ const Cart = () => {
 
             <div className="cart-items">
               {cartItems.map((item, index) => (
-                <div key={`${item.id}-${index}`} className="cart-item">
+                <div
+                  key={`${item.id}-${index}`}
+                  className="cart-item"
+                  data-reserved={item.reservationType === "temporal"}
+                >
                   <div className="cart-item-header">
                     <div className="flight-airline">
                       <span className="airline-logo">✈️</span>
@@ -313,6 +453,28 @@ const Cart = () => {
                     </div>
                   </div>
 
+                  {/* 🔥 NUEVO: Información de cantidad y estado */}
+                  <div className="cart-item-meta">
+                    <div className="item-type-badge">
+                      {getStatusBadge(item)}
+                      {/* 🔥 MOSTRAR CANTIDAD DE TIQUETES */}
+                      {item.ticketQuantity && (
+                        <span className="ticket-quantity-badge">
+                          🎟️ {item.ticketQuantity} tiquete(s)
+                        </span>
+                      )}
+                    </div>
+                    {/* 🔥 MOSTRAR TIEMPO DE EXPIRACIÓN */}
+                    {item.reservationType === "temporal" && item.timeLeft && (
+                      <div className="expiration-time">
+                        <span className="expiration-icon">⏰</span>
+                        <span className="expiration-text">
+                          {getExpirationText(item)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="cart-item-route">
                     <div className="route-segment">
                       <div className="route-time">
@@ -330,7 +492,6 @@ const Cart = () => {
                     </div>
 
                     <div className="route-middle">
-                      {/* 🔥 CORREGIDO: Usar la función formatDuration */}
                       <div className="route-duration">
                         {formatDuration(item.duration)}
                       </div>
@@ -359,6 +520,22 @@ const Cart = () => {
                     </div>
                   </div>
 
+                  {/* 🔥 NUEVO: Mostrar precio unitario si hay múltiples tiquetes */}
+                  {item.ticketQuantity && item.ticketQuantity > 1 && (
+                    <div className="unit-price-info">
+                      <span className="unit-price">
+                        Precio unitario:{" "}
+                        {new Intl.NumberFormat("es-CO", {
+                          style: "currency",
+                          currency: "COP",
+                          minimumFractionDigits: 0,
+                        }).format(
+                          Number(item.priceNumber) / Number(item.ticketQuantity)
+                        )}
+                      </span>
+                    </div>
+                  )}
+
                   {item.searchParams?.tripType === "roundtrip" && (
                     <div className="return-flight-info">
                       <div className="return-badge">🔄 Ida y Vuelta</div>
@@ -368,15 +545,24 @@ const Cart = () => {
                     </div>
                   )}
 
+                  {/* 🔥 MODIFICADO: Botones de acción mejorados */}
                   <div className="cart-item-actions">
+                    {/* Si es una reserva temporal, mostrar ambos botones */}
+                    {item.reservationType === "temporal" ? (
+                      <>
+                        <button
+                          className="btn-primary"
+                          onClick={() => proceedToPurchase(item)}
+                        >
+                          Comprar Ahora
+                        </button>
+                      </>
+                    ) : (
+                      // Si no es reserva temporal, solo mostrar ver detalles
+                      <button></button>
+                    )}
                     <button
-                      className="btn-primary"
-                      onClick={() => proceedToCheckout(item)}
-                    >
-                      Comprar Ahora
-                    </button>
-                    <button
-                      className="btn-secondary"
+                      className="btn-remove"
                       onClick={() => removeFromCart(item.id)}
                     >
                       Eliminar
@@ -389,7 +575,10 @@ const Cart = () => {
             <div className="cart-footer">
               <div className="cart-total-section">
                 <div className="total-line">
-                  <span>Subtotal ({getTotalItems()} vuelos):</span>
+                  <span>
+                    Subtotal ({getTotalItems()}{" "}
+                    {getTotalItems() === 1 ? "vuelo" : "vuelos"}):
+                  </span>
                   <span>
                     {new Intl.NumberFormat("es-CO", {
                       style: "currency",
@@ -398,6 +587,21 @@ const Cart = () => {
                     }).format(calculateTotal())}
                   </span>
                 </div>
+
+                {/* 🔥 NUEVO: Mostrar resumen de tipos de items */}
+                <div className="cart-summary-details">
+                  {cartItems.some(
+                    (item) => item.reservationType === "temporal"
+                  ) && (
+                    <div className="summary-note">
+                      <span className="note-icon">⏰</span>
+                      <span>
+                        Los vuelos marcados como "Reservado" expiran en 24 horas
+                      </span>
+                    </div>
+                  )}
+                </div>
+
                 <div className="total-line final">
                   <span>Total estimado:</span>
                   <span className="final-total">
@@ -414,6 +618,15 @@ const Cart = () => {
                   💡 <strong>Nota:</strong> Los precios pueden variar al
                   proceder con la compra debido a impuestos y tasas.
                 </p>
+                {/* 🔥 NUEVO: Nota sobre expiración */}
+                {cartItems.some(
+                  (item) => item.reservationType === "temporal"
+                ) && (
+                  <p className="expiration-note">
+                    ⚠️ <strong>Atención:</strong> Las reservas temporales se
+                    eliminarán automáticamente después de 24 horas.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -580,3 +793,4 @@ const Cart = () => {
 };
 
 export default Cart;
+
