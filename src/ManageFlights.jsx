@@ -26,6 +26,54 @@ const ManageFlights = () => {
     costo_vip: "",
   });
 
+  // ESTADOS PARA EDICIÓN
+  const [editingFlight, setEditingFlight] = useState(null); // Vuelo seleccionado
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [canEditDates, setCanEditDates] = useState(true); // Bloqueo si hay asientos ocupados
+  const [editForm, setEditForm] = useState({
+    costo_economico: "",
+    costo_vip: "",
+    fecha_salida: "",
+    hora_salida: "",
+    estado: "Activo"
+  });
+
+  // Reemplaza o agrega esto justo después de los useState:
+  
+  useEffect(() => {
+    fetchFlights();
+  }, []);
+
+  const fetchFlights = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/flights");
+      const data = await response.json();
+
+      // Mapeamos los datos de la BD (snake_case) a lo que espera tu diseño (camelCase)
+      const realFlights = data.map(dbFlight => ({
+        id: dbFlight.id_vuelo, // IMPORTANTE: Mapeamos id_vuelo a id
+        id_vuelo: dbFlight.id_vuelo, // Guardamos también el original por seguridad
+        flightNumber: `VS${String(dbFlight.id_vuelo).padStart(3, '0')}`, // Generamos un código visual (ej: VS009)
+        route: `${dbFlight.origen} → ${dbFlight.destino}`,
+        origin: dbFlight.origen,
+        destination: dbFlight.destino,
+        schedule: `${dbFlight.hora_salida.substring(0, 5)} - ${dbFlight.hora_llegada ? dbFlight.hora_llegada.substring(0, 5) : '?'}`,
+        fecha_salida: dbFlight.fecha_salida.split('T')[0], // Limpiar fecha
+        hora_salida: dbFlight.hora_salida,
+        hora_llegada: dbFlight.hora_llegada,
+        price: Number(dbFlight.costo_economico),
+        costo_economico: Number(dbFlight.costo_economico),
+        costo_vip: Number(dbFlight.costo_vip),
+        status: dbFlight.estado || "Activo",
+        tipo_vuelo: dbFlight.tipo_vuelo
+      }));
+
+      setFlights(realFlights);
+    } catch (error) {
+      console.error("Error cargando vuelos reales:", error);
+    }
+  };
+
   // Lista de ciudades disponibles
   const cities = [
     "Arauca",
@@ -603,6 +651,107 @@ const ManageFlights = () => {
     }
   };
 
+  // 1. Función al hacer click (MODO DIAGNÓSTICO)
+  const handleEditClick = async (flight) => {
+    
+    // 🔍 ESTO ES LO MÁS IMPORTANTE AHORA:
+    console.log("📦 OBJETO VUELO COMPLETO:", flight);
+    
+    // Intentamos encontrar el ID con varios nombres posibles
+    const flightId = flight.id_vuelo || flight.id || flight.flight_id || flight._id;
+
+    console.log("🔎 ID DETECTADO:", flightId);
+
+    if (!flightId) {
+      alert("❌ ERROR CRÍTICO: No se encuentra el ID del vuelo en los datos. Abre la consola (F12) para ver los detalles.");
+      return; 
+    }
+
+    const authToken = localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
+
+    if (!authToken) {
+      alert("⚠️ No hay sesión activa.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/flights/${flightId}/check-seats`, {
+        headers: { Authorization: "Bearer " + authToken }
+      });
+      
+      let canEdit = true;
+      let occupied = 0;
+
+      if (response.ok) {
+        const data = await response.json();
+        canEdit = data.canEditSensitiveData;
+        occupied = data.occupiedSeats;
+      }
+
+      setEditingFlight(flight);
+      setCanEditDates(canEdit);
+      
+      setEditForm({
+        costo_economico: flight.price || flight.costo_economico || "", 
+        costo_vip: flight.costo_vip || 0,
+        fecha_salida: flight.fecha_salida || "",
+        hora_salida: flight.hora_salida || "",
+        estado: flight.status || flight.estado || "Activo"
+      });
+
+      setShowEditModal(true);
+
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error al verificar asientos, revisa la consola.");
+    }
+  };
+
+  // 2. Manejar cambios en el input del modal
+  const handleEditChange = (e) => {
+    setEditForm({ ...editForm, [e.target.name]: e.target.value });
+  };
+
+  // 3. Guardar la edición (CORREGIDA ID)
+  const handleUpdateFlight = async (e) => {
+    e.preventDefault();
+    
+    const authToken = localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
+    
+    if (!authToken) {
+      alert("⚠️ Error de sesión: No se encontró tu credencial de acceso.");
+      return;
+    }
+
+    // 🔴 ERROR ANTERIOR: const flightId = editingFlight.id_vuelo || editingFlight.id;
+    // 🟢 CORRECCIÓN: Forzamos id_vuelo
+    const flightId = editingFlight.id_vuelo;
+
+    console.log("💾 Guardando en BD ID:", flightId); // Verifica que salga 9 y no 1
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/flights/${flightId}`, {
+        method: 'PUT',
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + authToken 
+        },
+        body: JSON.stringify(editForm)
+      });
+
+      if (response.ok) {
+        alert("✅ Vuelo actualizado correctamente.");
+        window.location.reload(); 
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        alert(`❌ Error al actualizar: ${errorData.mensaje || "Error desconocido"}`);
+      }
+    } catch (error) {
+      console.error("Error de red:", error);
+      alert("Error de conexión al intentar guardar.");
+    }
+  };
+  
   // Componente del menú de usuario
   const UserMenu = ({ userInfo, onLogout }) => {
     const [showMenu, setShowMenu] = useState(false);
@@ -819,10 +968,11 @@ const ManageFlights = () => {
                   <tbody>
                     {getPaginatedFlights().map((flight) => (
                       <tr
-                        key={flight.id}
-                        className={
-                          flight.status === "Inactivo" ? "inactive-flight" : ""
-                        }
+                        key={flight.id} 
+                        className={`${flight.status === "Inactivo" ? "inactive-flight" : ""} flight-row-clickable`}
+                        onClick={() => handleEditClick(flight)} // <--- AGREGAR ESTO
+                        style={{ cursor: "pointer" }} // Para indicar que es clickeable
+                        title="Click para editar vuelo"
                       >
                         <td>
                           <div className="flight-info-cell">
@@ -1167,6 +1317,76 @@ const ManageFlights = () => {
             </div>
           )}
         </div>
+        {/* MODAL DE EDICIÓN */}
+        {showEditModal && (
+          <div className="modal-overlay" style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', 
+            justifyContent: 'center', alignItems: 'center', zIndex: 1000
+          }}>
+            <div className="modal-content" style={{
+              backgroundColor: 'white', padding: '30px', borderRadius: '10px',
+              width: '500px', maxWidth: '90%'
+            }}>
+              <h2 style={{marginBottom: '20px'}}>✏️ Editar Vuelo {editingFlight?.flightNumber}</h2>
+              
+              <form onSubmit={handleUpdateFlight}>
+                <div className="form-group">
+                  <label>Estado del Vuelo</label>
+                  <select name="estado" value={editForm.estado} onChange={handleEditChange} style={{width: '100%', padding: '8px'}}>
+                    <option value="Activo">Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                    <option value="Retrasado">Retrasado</option>
+                    <option value="Cancelado">Cancelado</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Costo Económico</label>
+                  <input 
+                    type="number" name="costo_economico" 
+                    value={editForm.costo_economico} onChange={handleEditChange} 
+                    style={{width: '100%', padding: '8px'}}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Costo VIP</label>
+                  <input 
+                    type="number" name="costo_vip" 
+                    value={editForm.costo_vip} onChange={handleEditChange} 
+                    style={{width: '100%', padding: '8px'}}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Fecha Salida { !canEditDates && <span style={{color:'red'}}>(Bloqueado: Hay pasajeros)</span> }</label>
+                  <input 
+                    type="date" name="fecha_salida" 
+                    value={editForm.fecha_salida} onChange={handleEditChange} 
+                    disabled={!canEditDates} // SE BLOQUEA SI HAY ASIENTOS OCUPADOS
+                    style={{width: '100%', padding: '8px', backgroundColor: !canEditDates ? '#eee' : 'white'}}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Hora Salida { !canEditDates && <span style={{color:'red'}}>(Bloqueado)</span> }</label>
+                  <input 
+                    type="time" name="hora_salida" 
+                    value={editForm.hora_salida} onChange={handleEditChange} 
+                    disabled={!canEditDates} // SE BLOQUEA SI HAY ASIENTOS OCUPADOS
+                    style={{width: '100%', padding: '8px', backgroundColor: !canEditDates ? '#eee' : 'white'}}
+                  />
+                </div>
+
+                <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
+                  <button type="submit" className="submit-btn primary">Guardar Cambios</button>
+                  <button type="button" className="submit-btn" style={{backgroundColor: '#ccc'}} onClick={() => setShowEditModal(false)}>Cancelar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
