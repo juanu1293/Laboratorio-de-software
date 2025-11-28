@@ -101,6 +101,21 @@ exports.createFlight = async (req, res) => {
 
     console.log(`🪑 ${totalAsientos} asientos creados para el vuelo ${idVuelo}`);
 
+    // ======================================================
+    //  📰 CREAR NOTICIA AUTOMÁTICAMENTE DEL NUEVO VUELO
+    // ======================================================
+    const titulo = `Nuevo vuelo desde ${destino} hasta ${origen}`;
+    const descripcion = `Aprovecha para viajar desde ${destino} a ${origen} por solo ${costo_economico} o si quieres una experiencia mas agradable puedes viajar en nuestra primera clase por solo ${costo_vip} y disfruta con nosotros de este emocionante viaje`;
+
+    await db.query(
+      `INSERT INTO usuario.noticia 
+        (idadmin, titulo, descripcion, fechapublicacion, tipo)
+       VALUES (NULL, $1, $2, NOW(), 'vuelo')`,
+      [titulo, descripcion]
+    );
+
+    console.log("📰 Noticia creada automáticamente para el nuevo vuelo");
+
 
     res.status(201).json({
       mensaje: "✅ Vuelo creado correctamente",
@@ -115,7 +130,5 @@ exports.createFlight = async (req, res) => {
     });
   }
 };
-
-
 
 
