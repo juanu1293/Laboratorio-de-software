@@ -732,6 +732,7 @@
   border-radius: 8px;
   border: 1px solid #e1e8ed;
 }
+
 /* Responsive */
 @media (max-width: 768px) {
   .card-header {
@@ -743,4 +744,123 @@
   .cvv-input {
     width: 100% !important;
   }
+}
+
+.payment-method-toggle {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ccc;
+  background: #f9f9f9;
+  cursor: pointer;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.toggle-btn.active {
+  background: #023e8a;
+  color: white;
+  border-color: #023e8a;
+}
+
+.saved-cards-list {
+  display: grid;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.saved-card-item {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.saved-card-item:hover {
+  border-color: #90e0ef;
+  background: #f0fbff;
+}
+
+.saved-card-item.selected {
+  border-color: #023e8a;
+  background: #e3f2fd;
+  box-shadow: 0 4px 10px rgba(2, 62, 138, 0.1);
+}
+
+.radio-circle {
+  height: 20px;
+  width: 20px;
+  border: 2px solid #ccc;
+  border-radius: 50%;
+  margin-right: 15px;
+  position: relative;
+}
+
+.saved-card-item.selected .radio-circle {
+  border-color: #023e8a;
+}
+
+.saved-card-item.selected .radio-circle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background: #023e8a;
+  border-radius: 50%;
+}
+
+.card-info-display {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-brand {
+  font-weight: bold;
+  color: #023e8a;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.card-last4 {
+  font-size: 1.1rem;
+  color: #333;
+  letter-spacing: 1px;
+}
+
+.cvv-verification-box {
+  background: #fff3cd;
+  border: 1px solid #ffeeba;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 15px;
+  animation: fadeIn 0.3s ease;
+}
+
+.cvv-verification-box label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #856404;
+}
+
+.cvv-verification-box input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  letter-spacing: 2px;
 }
