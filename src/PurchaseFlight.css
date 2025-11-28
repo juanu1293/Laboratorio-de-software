@@ -732,9 +732,15 @@
   border-radius: 8px;
   border: 1px solid #e1e8ed;
 }
-
 /* Responsive */
 @media (max-width: 768px) {
   .card-header {
     flex-direction: column;
-    align
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .cvv-input {
+    width: 100% !important;
+  }
+}
