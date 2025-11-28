@@ -21,6 +21,10 @@ import SearchFlights from "./SearchFlights";
 import ReserveFlight from "./ReserveFlight";
 import ManageFlights from "./ManageFlights";
 import Cart from "./Cart";
+import PurchaseFlight from "./PurchaseFlight";
+import News from "./News";
+import CancelFlights from "./CancelFlights";
+import Payments from "./Payments";
 
 const App = () => {
   return (
@@ -38,6 +42,10 @@ const App = () => {
         <Route path="/reserve-flight" element={<ReserveFlight />} />
         <Route path="/manage-flights" element={<ManageFlights />} />
         <Route path="/cart" element={<Cart />} />
+        <Route path="/purchase-flight" element={<PurchaseFlight />} />
+        <Route path="/news" element={<News />} />
+        <Route path="/cancel-flights" element={<CancelFlights />} />
+        <Route path="/balance-payments" element={<Payments />} />
       </Routes>
     </Router>
   );
@@ -599,7 +607,7 @@ const HomePage = () => {
             <a href="#" onClick={handleReservarClick}>
               Reservas
             </a>
-            <a href="#" onClick={handleComingSoon}>
+            <a href="#" onClick={() => navigate("/news")}>
               Noticias
             </a>
             <a href="#" onClick={handleComingSoon}>
@@ -931,3 +939,4 @@ const HomePage = () => {
 };
 
 export default App;
+
