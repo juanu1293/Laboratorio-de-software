@@ -13,6 +13,11 @@ exports.resumenCompra = async (req, res) => {
         v.destino,
         v.costo_economico,
         v.costo_vip
+        CASE 
+          WHEN t.clase = 'vip' THEN v.costo_vip
+          WHEN t.clase = 'economica' THEN v.costo_economico
+          ELSE 0
+        END as precio
       FROM usuario.tiquete t
       INNER JOIN usuario.vuelo v ON v.id_vuelo = t.idvuelo
       WHERE t.idtiquete = $1
@@ -245,3 +250,4 @@ exports.pagarCompra = async (req, res) => {
     client.release();
   }
 };
+
