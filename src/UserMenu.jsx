@@ -35,17 +35,18 @@ const UserMenu = ({ userInfo, onLogout }) => {
       // Administrador y Usuario
       "edit-info": () => navigate("/edit-profile"),
       "change-password": () => navigate("/change-password"),
+      news: () => navigate("/news"),
 
       // Administrador
       "manage-flights": () => navigate("/manage-flights"),
-      "cancel-tickets": () => navigate("/cancel-tickets"),
+      "cancel-flights": () => navigate("/cancel-flights"),
       "manage-news": () => navigate("/manage-news"),
       messaging: () => navigate("/messaging"),
       history: () => navigate("/history"),
 
       // Usuario
       "check-in": () => navigate("/check-in"),
-      "balance-payments": () => navigate("/balance-payments"),
+      "balance-payments": () => navigate("balance-payments"),
       cart: () => navigate("/cart"), // NUEVA OPCIÓN
     };
 
@@ -53,7 +54,6 @@ const UserMenu = ({ userInfo, onLogout }) => {
       actions[action]();
     }
   };
-
   // Definir items del menú según el rol - ACTUALIZADO para incluir todas las opciones del admin
   const getMenuItems = () => {
     const commonItems = [
@@ -67,16 +67,16 @@ const UserMenu = ({ userInfo, onLogout }) => {
         { id: "edit-info", label: "Editar Perfil", icon: "✏️" },
         { id: "change-password", label: "Cambiar Contraseña", icon: "🔒" },
         { id: "manage-flights", label: "Gestionar Vuelos", icon: "✈️" },
-        { id: "cancel-tickets", label: "Cancelar Tiquetes", icon: "🎫" },
-        { id: "manage-news", label: "Gestionar Noticias", icon: "📰" },
+        { id: "cancel-flights", label: "Cancear Vuelos", icon: "❌" },
+        { id: "news", label: " Gestionar Noticias", icon: "📰" },
       ],
       cliente: [
         { id: "edit-info", label: "Editar Información", icon: "✏️" },
         { id: "change-password", label: "Cambiar Contraseña", icon: "🔒" },
-        { id: "cancel-tickets", label: "Cancelar Tiquete", icon: "🎫" },
-        { id: "cart", label: "Carrito de Compras", icon: "🛒" }, // NUEVA OPCIÓN
+        { id: "cart", label: "Carrito de Compras", icon: "🛒" },
         { id: "check-in", label: "Check-in", icon: "✅" },
         { id: "balance-payments", label: "Saldo y Pagos", icon: "💰" },
+        { id: "news", label: "Noticias", icon: "📰" },
       ],
     };
 
