@@ -34,7 +34,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
 
       // Administrador y Usuario
       "edit-info": () => navigate("/edit-profile"),
-      "change-password": () => navigate("/change-password"),
+      "change-password": () => navigate("/forgot-password"),
       news: () => navigate("/news"),
 
       // Administrador
@@ -67,7 +67,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
         { id: "edit-info", label: "Editar Perfil", icon: "✏️" },
         { id: "change-password", label: "Cambiar Contraseña", icon: "🔒" },
         { id: "manage-flights", label: "Gestionar Vuelos", icon: "✈️" },
-        { id: "cancel-flights", label: "Cancear Vuelos", icon: "❌" },
+        { id: "cancel-flights", label: "Cancelar Vuelos", icon: "❌" },
         { id: "news", label: " Gestionar Noticias", icon: "📰" },
       ],
       cliente: [
@@ -161,4 +161,3 @@ const UserMenu = ({ userInfo, onLogout }) => {
 };
 
 export default UserMenu;
-
