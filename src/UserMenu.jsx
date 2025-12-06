@@ -42,7 +42,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
       "cancel-flights": () => navigate("/cancel-flights"),
       "manage-news": () => navigate("/manage-news"),
       messaging: () => navigate("/messaging"),
-      history: () => navigate("/history"),
+      history: () => navigate("/my-purchases"),
 
       // Usuario
       "check-in": () => navigate("/check-in"),
@@ -56,10 +56,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
   };
   // Definir items del menú según el rol - ACTUALIZADO para incluir todas las opciones del admin
   const getMenuItems = () => {
-    const commonItems = [
-      { id: "messaging", label: "Mensajería", icon: "💬" },
-      { id: "history", label: "Historial", icon: "📊" },
-    ];
+    const commonItems = [{ id: "messaging", label: "Mensajería", icon: "💬" }];
 
     const roleSpecificItems = {
       root: [{ id: "create-admin", label: "Crear Administrador", icon: "👨‍💼" }],
@@ -77,6 +74,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
         { id: "check-in", label: "Check-in", icon: "✅" },
         { id: "balance-payments", label: "Saldo y Pagos", icon: "💰" },
         { id: "news", label: "Noticias", icon: "📰" },
+        { id: "history", label: "Historial Compras", icon: "📊" },
       ],
     };
 
