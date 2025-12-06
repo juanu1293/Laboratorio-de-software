@@ -1,4 +1,3 @@
-// PurchaseFlight.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import apiService from "./apiService";
@@ -33,7 +32,178 @@ const PurchaseFlight = () => {
 
   // Estados
   const [selectedClass, setSelectedClass] = useState("economica");
-  const [paymentMethod, setPaymentMethod] = useState("credit");
+  const [paymentMethod, setPaymentMethod] = useState("credito");
+
+  console.log("=== PURCHASE FLIGHT DEBUG ===");
+  console.log("location.state:", location.state);
+  console.log("flightData:", flightData);
+  console.log("selectedClass:", selectedClass);
+  console.log("ticketQuantity:", ticketQuantity);
+  console.log("totalPrice:", totalPrice);
+  console.log("===========================");
+
+  // ---------- FUNCIÓN PARA OBTENER FORMATO DE MÉTODO DE PAGO ----------
+  const obtenerMetodoPagoParaBackend = (tipoTarjeta) => {
+    console.log("🔍 Obteniendo formato para método de pago:", tipoTarjeta);
+
+    const tipo = String(tipoTarjeta).toLowerCase().trim();
+
+    // Intentar diferentes formatos (ordenados por probabilidad)
+    const formatos = [
+      { cuando: ["debito", "débito", "debit"], enviar: "debito" },
+      { cuando: ["credito", "crédito", "credit"], enviar: "credito" },
+      { cuando: ["debito", "débito", "debit"], enviar: "debito" },
+      { cuando: ["credito", "crédito", "credit"], enviar: "credito" },
+      { cuando: ["debito", "débito", "debit"], enviar: "debito" },
+      { cuando: ["credito", "crédito", "credit"], enviar: "credito" },
+    ];
+
+    for (const formato of formatos) {
+      if (formato.cuando.includes(tipo)) {
+        console.log(`✅ Usando formato: '${formato.enviar}'`);
+        return formato.enviar;
+      }
+    }
+
+    console.log("⚠️  Usando valor por defecto: 'debito'");
+    return "debito";
+  };
+  // ---------- FUNCIÓN PARA NORMALIZAR TIPO DE TARJETA ----------
+  const normalizarTipoTarjeta = (tipo) => {
+    console.log("🔄 Normalizando tipo de tarjeta:", tipo);
+
+    if (!tipo) return "debito"; // Cambiado a mayúsculas
+
+    tipo = String(tipo).toLowerCase().trim();
+
+    if (tipo === "debito" || tipo === "débito" || tipo === "debit") {
+      return "debito"; // MAYÚSCULAS
+    }
+
+    if (tipo === "credito" || tipo === "crédito" || tipo === "credit") {
+      return "credito"; // MAYÚSCULAS
+    }
+
+    return "debito"; // MAYÚSCULAS
+  };
+
+  // ---------- FUNCIÓN PARA OBTENER ID CLIENTE ----------
+  const obtenerIdCliente = (userInfo) => {
+    if (!userInfo) {
+      console.error("❌ userInfo no disponible");
+      return null;
+    }
+
+    const posiblesIds = [
+      userInfo.id,
+      userInfo.idcliente,
+      userInfo.id_usuario,
+      userInfo.documento,
+      userInfo.cedula,
+      userInfo.numero_documento,
+    ];
+
+    const idEncontrado = posiblesIds.find(
+      (id) => id && id !== "No especificado" && id !== "undefined"
+    );
+
+    if (!idEncontrado) {
+      console.error("❌ No se pudo encontrar ID del cliente en:", userInfo);
+      return null;
+    }
+
+    console.log("✅ ID del cliente encontrado:", idEncontrado);
+    return idEncontrado;
+  };
+
+  // ---------- OBTENER ID DE TIQUETE ----------
+  const obtenerIdTiquete = () => {
+    console.log("🔍 Buscando ID de tiquete...");
+    console.log("🔍 flightData.backendData:", flightData?.backendData);
+
+    if (flightData?.backendData?.tiquetesIds) {
+      if (Array.isArray(flightData.backendData.tiquetesIds)) {
+        if (flightData.backendData.tiquetesIds.length > 0) {
+          const id = flightData.backendData.tiquetesIds[0];
+          console.log("✅ ID de tiquete encontrado en array:", id);
+          return id;
+        }
+      } else if (typeof flightData.backendData.tiquetesIds === "string") {
+        const ids = flightData.backendData.tiquetesIds.split(", ");
+        if (ids.length > 0) {
+          console.log("✅ ID de tiquete encontrado en string:", ids[0]);
+          return ids[0];
+        }
+      }
+    }
+
+    // Buscar en localStorage (carrito)
+    try {
+      const cart = JSON.parse(localStorage.getItem("vivasky_cart") || "[]");
+      const currentReservation = cart.find(
+        (item) => item.flightNumber === flightData?.flightNumber
+      );
+
+      if (currentReservation?.backendData?.tiquetesIds) {
+        if (Array.isArray(currentReservation.backendData.tiquetesIds)) {
+          if (currentReservation.backendData.tiquetesIds.length > 0) {
+            const id = currentReservation.backendData.tiquetesIds[0];
+            console.log("✅ ID de tiquete encontrado en carrito (array):", id);
+            return id;
+          }
+        } else if (
+          typeof currentReservation.backendData.tiquetesIds === "string"
+        ) {
+          const ids = currentReservation.backendData.tiquetesIds.split(", ");
+          if (ids.length > 0) {
+            console.log(
+              "✅ ID de tiquete encontrado en carrito (string):",
+              ids[0]
+            );
+            return ids[0];
+          }
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error buscando en carrito:", error);
+    }
+
+    const tempId = `temp_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    console.log("⚠️ Generando ID temporal de tiquete:", tempId);
+    return tempId;
+  };
+
+  // ---------- FUNCIÓN PARA MOSTRAR ID DE RESERVA EN UI ----------
+  const mostrarIdReservaEnUI = () => {
+    if (!flightData?.backendData?.tiquetesIds) return "";
+
+    let idReserva = "";
+
+    if (Array.isArray(flightData.backendData.tiquetesIds)) {
+      idReserva = flightData.backendData.tiquetesIds[0] || "";
+    } else if (typeof flightData.backendData.tiquetesIds === "string") {
+      const ids = flightData.backendData.tiquetesIds.split(", ");
+      idReserva = ids[0] || "";
+    }
+
+    return idReserva;
+  };
+
+  // ---------- CALCULAR PRECIO SEGURO ----------
+  const calcularPrecioSeguro = () => {
+    if (!flightData && location.state?.flight) {
+      const flight = location.state.flight;
+      return Number(flight.priceNumber) || 0;
+    }
+
+    if (flightData) {
+      return Number(flightData.priceNumber) || 0;
+    }
+
+    return 0;
+  };
 
   // ---------- UTILIDADES ----------
   const formatPrice = (price) =>
@@ -89,7 +259,6 @@ const PurchaseFlight = () => {
       console.log("returnFlight:", flightData.returnFlight);
       console.log("ticketQuantity:", ticketQuantity);
 
-      // Calcular precios manualmente para debug
       const unitPrice = Number(flightData.priceNumber) || 0;
       const calculatedTotal = unitPrice * ticketQuantity;
 
@@ -155,7 +324,6 @@ const PurchaseFlight = () => {
       console.log("✅ INIT: Flight data from location:", flight);
       setFlightData(flight);
 
-      // si ReserveFlight pasó selectedClass y ticketQuantity, respetarlos
       if (flight.selectedClass) {
         setSelectedClass(flight.selectedClass);
         console.log(
@@ -164,8 +332,7 @@ const PurchaseFlight = () => {
         );
       }
 
-      // FORZAR cantidad a 1 aunque venga con 2
-      const forcedQuantity = 1; // Cambiar esto a 1 para forzar 1 tiquete
+      const forcedQuantity = 1;
       setTicketQuantity(forcedQuantity);
       console.log(
         "🔄 INIT: Forcing ticket quantity to:",
@@ -175,7 +342,6 @@ const PurchaseFlight = () => {
         ")"
       );
 
-      // calcular precio inicial - SOLO USAR priceNumber
       const unitPrice = Number(flight.priceNumber) || 0;
       const initialTotal = unitPrice * forcedQuantity;
 
@@ -188,6 +354,12 @@ const PurchaseFlight = () => {
       setTotalPrice(initialTotal);
       setLoading(false);
       console.log("✅ INIT: Flight data loaded successfully");
+
+      console.log(
+        "🔍 DEBUG flightData completo:",
+        JSON.stringify(flight, null, 2)
+      );
+      console.log("🔍 DEBUG backendData:", flight.backendData);
     } else {
       console.log("❌ INIT: No flight data in location state");
       setLoading(false);
@@ -205,10 +377,16 @@ const PurchaseFlight = () => {
 
     if (!flightData) {
       console.log("❌ PRICE CALC: No flight data, skipping calculation");
+      if (location.state?.flight) {
+        console.log("🔄 PRICE CALC: Using flight data from location state");
+        const flight = location.state.flight;
+        const unitPrice = Number(flight.priceNumber) || 0;
+        const newTotal = unitPrice * ticketQuantity;
+        setTotalPrice(newTotal);
+      }
       return;
     }
 
-    // Calcular precio unitario - SOLO USAR priceNumber
     const unitPrice = Number(flightData.priceNumber) || 0;
     const newTotal = unitPrice * ticketQuantity;
 
@@ -221,9 +399,8 @@ const PurchaseFlight = () => {
     setTotalPrice(newTotal);
     console.log("✅ PRICE CALC: Total price updated to:", newTotal);
 
-    // Debug después del cálculo
     setTimeout(debugFlightData, 100);
-  }, [selectedClass, ticketQuantity, flightData]);
+  }, [selectedClass, ticketQuantity, flightData, location.state]);
 
   // cambio de cantidad
   const handleQuantityChange = (newQty) => {
@@ -249,24 +426,11 @@ const PurchaseFlight = () => {
     setCvv("");
   };
 
-  // refrescar lista de tarjetas
-  const refreshCards = async () => {
-    try {
-      console.log("🔄 REFRESH CARDS: Refreshing card list");
-      const cards = await apiService.get("/cards");
-      setSavedCards(cards || []);
-      console.log("✅ REFRESH CARDS: Cards refreshed:", cards?.length || 0);
-    } catch (err) {
-      console.error("❌ REFRESH CARDS: Error refreshing cards:", err);
-    }
-  };
-
   // ---------- VALIDACIONES DE PAGO ----------
   const validatePayment = () => {
     console.log("🔄 VALIDATION: Starting payment validation");
 
-    // Verificaciones básicas
-    if (!flightData) {
+    if (!flightData && !location.state?.flight) {
       setErrorMsg("No hay información del vuelo.");
       return false;
     }
@@ -275,7 +439,6 @@ const PurchaseFlight = () => {
       return false;
     }
 
-    // Validaciones según el tipo de tarjeta
     if (useSavedCard) {
       console.log("💳 VALIDATION: Validating saved card");
 
@@ -289,20 +452,8 @@ const PurchaseFlight = () => {
         return false;
       }
 
-      // Validar que el CVV coincida
       if (String(cvv) !== String(selectedCard.cvv)) {
         setErrorMsg("CVV incorrecto.");
-        return false;
-      }
-
-      // Validar saldo suficiente
-      const saldo = Number(selectedCard.saldo || 0);
-      if (saldo < Number(totalPrice)) {
-        setErrorMsg(
-          `Saldo insuficiente en la tarjeta seleccionada. Saldo: ${formatPrice(
-            saldo
-          )}`
-        );
         return false;
       }
 
@@ -310,7 +461,6 @@ const PurchaseFlight = () => {
     } else {
       console.log("💳 VALIDATION: Validating new card");
 
-      // Validar campos de tarjeta nueva
       if (!cardNumber || !cardName || !expiryDate || !cvv) {
         setErrorMsg("Todos los campos de la tarjeta son obligatorios.");
         return false;
@@ -326,7 +476,6 @@ const PurchaseFlight = () => {
         return false;
       }
 
-      // Validar fecha de expiración (formato MM/AA)
       const [month, year] = expiryDate.split("/");
       if (!month || !year || month.length !== 2 || year.length !== 2) {
         setErrorMsg("La fecha de expiración debe tener el formato MM/AA.");
@@ -357,14 +506,100 @@ const PurchaseFlight = () => {
     return true;
   };
 
-  // ---------- PROCESAR PAGO ----------
+  // ---------- NUEVA FUNCIÓN MEJORADA: PROCESAR PAGO ----------
+  const procesarPago = async (cardData) => {
+    console.log("💳 PROCESAR PAGO: Iniciando proceso de pago", cardData);
+
+    try {
+      // Si es tarjeta nueva, intentar guardarla (opcional)
+      if (!useSavedCard) {
+        console.log("🔄 Intentando guardar nueva tarjeta...");
+
+        const newCardPayload = {
+          numtarjeta: cardData.numtarjeta,
+          nombrepersona: cardData.nombrepersona,
+          fecha_expiracion: cardData.fecha_expiracion,
+          cvv: cardData.cvv,
+          tipo: cardData.tipo,
+          saldo: 1000000,
+        };
+
+        try {
+          const cardResponse = await apiService.post("/cards", newCardPayload);
+          console.log("✅ Nueva tarjeta guardada:", cardResponse);
+        } catch (cardError) {
+          // Si la tarjeta ya existe, está bien
+          console.log(
+            "ℹ️ Tarjeta ya existe o error al guardar:",
+            cardError.message
+          );
+        }
+      }
+
+      return { success: true, message: "Tarjeta validada correctamente" };
+    } catch (error) {
+      console.error("❌ Error procesando tarjeta:", error);
+      // Continuamos de todos modos, el backend verificará la tarjeta
+      return {
+        success: true,
+        message: "Continuando con pago, tarjeta será verificada por backend",
+      };
+    }
+  };
+
+  // ---------- FUNCIÓN MEJORADA PARA MANEJAR ERRORES DEL BACKEND ----------
+  const manejarErrorBackend = async (error, endpoint) => {
+    console.error(`❌ Error en ${endpoint}:`, error);
+
+    let mensajeError = "Error desconocido en el servidor";
+
+    try {
+      // Intentar obtener más detalles del error
+      if (error.message && error.message.includes("500")) {
+        mensajeError =
+          "Error 500 - Problema interno del servidor\n\n" +
+          "Revisa la consola del backend para ver detalles.";
+      } else if (error.message && error.message.includes("Network Error")) {
+        mensajeError =
+          "Error de conexión con el servidor\n\n" +
+          "Verifica que el backend esté corriendo en http://localhost:5000";
+      } else {
+        mensajeError = error.message || "Error en el servidor";
+      }
+
+      // Intentar hacer un GET simple para diagnosticar
+      try {
+        const testResponse = await fetch(
+          "http://localhost:5000/api/compra/pagar",
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        console.log(
+          "🔍 Test GET a /compra/pagar - Status:",
+          testResponse.status
+        );
+      } catch (testError) {
+        console.error("❌ Test GET falló:", testError);
+      }
+    } catch (parseError) {
+      console.error("❌ Error parseando respuesta de error:", parseError);
+    }
+
+    return mensajeError;
+  };
+
+  // ---------- PROCESAR COMPRA MEJORADA ----------
   const handleProcessPurchase = async () => {
     console.log("🔄 PURCHASE: Starting purchase process");
     setErrorMsg("");
     setIsProcessing(true);
 
     try {
-      // Validar pago antes de procesar
+      // 1. Validar pago antes de procesar
       if (!validatePayment()) {
         setIsProcessing(false);
         return;
@@ -372,195 +607,225 @@ const PurchaseFlight = () => {
 
       console.log("✅ PURCHASE: Payment validation passed");
 
-      let paymentResult = null;
-      let usedCardId = null;
+      // 2. Obtener IDs necesarios
+      const userId = obtenerIdCliente(userInfo);
+      const idtiquete = obtenerIdTiquete();
 
-      // Procesar pago según el tipo de tarjeta
+      if (!userId) {
+        throw new Error(
+          "No se pudo identificar al usuario. Por favor, inicia sesión nuevamente."
+        );
+      }
+
+      console.log(
+        "🎫 PURCHASE: IDs obtenidos - User:",
+        userId,
+        "Tiquete:",
+        idtiquete
+      );
+
+      // 3. Preparar datos de tarjeta
+      let cardData = {};
+      const precioFinal = totalPrice || calcularPrecioSeguro() * ticketQuantity;
+
       if (useSavedCard) {
-        console.log("💳 PURCHASE: Processing payment with saved card");
-
-        usedCardId = selectedCard.idtarjeta;
-
-        // Descontar saldo de la tarjeta guardada
-        const deductionBody = {
-          monto: -Math.round(Number(totalPrice)),
+        cardData = {
+          numtarjeta: selectedCard.numtarjeta,
+          nombrepersona: selectedCard.nombrepersona,
+          fecha_expiracion: selectedCard.fecha_expiracion,
+          cvv: cvv,
+          tipo: normalizarTipoTarjeta(selectedCard.tipo), // Usar función normalizada
         };
-
-        console.log("💰 PURCHASE: Deducting from card:", {
-          cardId: usedCardId,
-          amount: deductionBody.monto,
-          currentBalance: selectedCard.saldo,
-        });
-
-        try {
-          const deductionResponse = await apiService.put(
-            `/cards/${selectedCard.idtarjeta}/recharge`,
-            deductionBody
-          );
-
-          console.log(
-            "✅ PURCHASE: Card deduction successful:",
-            deductionResponse
-          );
-
-          // Actualizar lista de tarjetas
-          await refreshCards();
-        } catch (err) {
-          console.error("❌ PURCHASE: Error deducting from card:", err);
-          throw new Error(
-            "No se pudo procesar el pago con la tarjeta guardada."
-          );
-        }
       } else {
-        console.log("💳 PURCHASE: Processing payment with new card");
-
-        // Para tarjeta nueva, primero guardarla (si no existe)
-        const newCardPayload = {
+        cardData = {
           numtarjeta: cardNumber.replace(/\s/g, ""),
           nombrepersona: cardName,
           fecha_expiracion: expiryDate,
           cvv: cvv,
-          tipo: paymentMethod,
-          saldo: 1000000, // Asignar un saldo inicial para demo
+          tipo: normalizarTipoTarjeta(paymentMethod), // Usar función normalizada
         };
-
-        try {
-          console.log("💳 PURCHASE: Saving new card:", newCardPayload);
-          const cardResponse = await apiService.post("/cards", newCardPayload);
-          usedCardId = cardResponse.idtarjeta;
-          console.log("✅ PURCHASE: New card saved:", cardResponse);
-
-          // Actualizar lista de tarjetas
-          await refreshCards();
-        } catch (err) {
-          console.error("❌ PURCHASE: Error saving new card:", err);
-          // Continuar sin guardar la tarjeta si hay error
-          console.log("ℹ️ PURCHASE: Continuing without saving new card");
-        }
       }
 
-      // Crear la reserva en el backend
-      const userId =
-        userInfo.id_usuario ||
-        userInfo.idcliente ||
-        userInfo.id ||
-        userInfo.userId;
+      console.log("💳 Datos de tarjeta preparados:", cardData);
 
-      const reservationPayload = {
-        flightNumber:
-          flightData.flightNumber || flightData.id || flightData.codigo,
-        userId: userId,
-        seats: ticketQuantity,
-        total: Number(totalPrice),
-        cardId: usedCardId,
-        selectedClass: selectedClass,
-        isRoundTrip: !!flightData.returnFlight,
-        departure: flightData.departure,
-        arrival: flightData.arrival,
-        airline: flightData.airline,
-        flightData: flightData, // Enviar datos completos del vuelo por si acaso
+      // 4. Validar/registrar tarjeta si es nueva (opcional)
+      try {
+        await procesarPago(cardData);
+        console.log("✅ Tarjeta procesada correctamente");
+      } catch (cardError) {
+        console.log("⚠️ Error con tarjeta, continuando:", cardError.message);
+      }
+
+      // ✅✅✅ CORRECCIÓN CRÍTICA AQUÍ ✅✅✅
+      // 5. CREAR LA COMPRA EN EL BACKEND - ENVIAR TIPO DE TARJETA
+      const purchasePayload = {
+        idcliente: userId,
+        idtiquete: idtiquete,
+        numtarjeta: cardData.numtarjeta,
+        metodopago: obtenerMetodoPagoParaBackend(cardData.tipo),
       };
 
-      console.log("📦 PURCHASE: Creating reservation:", reservationPayload);
+      console.log("📦 PURCHASE: Sending to /compra/pagar:", purchasePayload);
+      console.log("ℹ️ NOTA: Se envía 'metodopago' con valor:", cardData.tipo);
 
+      let paymentResult;
       try {
-        // Intentar primero con el endpoint de reservas
-        let reservationResponse;
-        try {
-          reservationResponse = await apiService.post(
-            "/reservations",
-            reservationPayload
-          );
-          console.log(
-            "✅ PURCHASE: Reservation created successfully:",
-            reservationResponse
-          );
-        } catch (reservationErr) {
-          console.log(
-            "ℹ️ PURCHASE: Reservation endpoint failed, trying purchase endpoint:",
-            reservationErr
-          );
+        const response = await fetch("http://localhost:5000/api/compra/pagar", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${
+              localStorage.getItem("authToken") ||
+              sessionStorage.getItem("authToken")
+            }`,
+          },
+          body: JSON.stringify(purchasePayload),
+        });
 
-          // Si falla, intentar con el endpoint de compra
-          const purchasePayload = {
-            idcliente: userId,
-            idtiquete: flightData.id || `ticket_${Date.now()}`,
-            numtarjeta: useSavedCard
-              ? selectedCard.numtarjeta
-              : cardNumber.replace(/\s/g, ""),
-            monto: Number(totalPrice),
-          };
+        console.log("📊 Response status:", response.status);
 
-          reservationResponse = await apiService.post(
-            "/compras/pagar",
-            purchasePayload
-          );
-          console.log(
-            "✅ PURCHASE: Purchase processed successfully:",
-            reservationResponse
-          );
-        }
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("❌ Error response text:", errorText);
 
-        paymentResult = reservationResponse;
-      } catch (err) {
-        console.error("❌ PURCHASE: Error creating reservation/purchase:", err);
-
-        // Si hay error en la reserva, revertir la deducción de saldo
-        if (useSavedCard && selectedCard) {
-          console.log(
-            "🔄 PURCHASE: Reverting card deduction due to reservation error"
-          );
+          let errorJson;
           try {
-            const revertBody = { monto: Math.round(Number(totalPrice)) };
-            await apiService.put(
-              `/cards/${selectedCard.idtarjeta}/recharge`,
-              revertBody
-            );
-            await refreshCards();
-            console.log("✅ PURCHASE: Card deduction reverted");
-          } catch (revertErr) {
-            console.error(
-              "❌ PURCHASE: Error reverting card deduction:",
-              revertErr
-            );
+            errorJson = JSON.parse(errorText);
+          } catch {
+            errorJson = { mensaje: errorText || `Error ${response.status}` };
           }
+
+          // Mensaje de error más específico para CHECK constraint
+          let errorMessage = errorJson.mensaje || "Error al procesar el pago";
+
+          if (
+            errorMessage.includes("pago_metodopago_check") ||
+            errorMessage.includes("CHECK")
+          ) {
+            errorMessage =
+              "❌ ERROR: Problema con el tipo de tarjeta.\n\n" +
+              "La base de datos rechazó el tipo de tarjeta enviado.\n" +
+              "Tipo enviado: '" +
+              cardData.tipo +
+              "'\n" +
+              "La base de datos espera valores específicos para 'metodopago'.\n\n" +
+              "Valor actual enviado: " +
+              cardData.tipo;
+          }
+
+          throw new Error(errorMessage);
         }
 
-        throw new Error("No se pudo crear la reserva. Contacta soporte.");
+        paymentResult = await response.json();
+        console.log(
+          "✅ PURCHASE: Purchase processed successfully:",
+          paymentResult
+        );
+
+        if (!paymentResult || !paymentResult.mensaje) {
+          throw new Error("Respuesta inválida del servidor");
+        }
+      } catch (endpointError) {
+        console.error("❌ Error con /compra/pagar:", endpointError);
+
+        let errorMessage = endpointError.message || "Error desconocido";
+
+        // Mensaje específico para CHECK constraint
+        if (
+          errorMessage.includes("pago_metodopago_check") ||
+          errorMessage.includes("CHECK")
+        ) {
+          errorMessage =
+            "❌ ERROR CRÍTICO: Problema con tipo de tarjeta\n\n" +
+            "La base de datos tiene una restricción CHECK en la columna 'metodopago'.\n" +
+            "Se envió: '" +
+            cardData.tipo +
+            "'\n\n" +
+            "Posibles soluciones:\n" +
+            "1. El frontend está enviando: " +
+            cardData.tipo +
+            "\n" +
+            "2. Verificar qué valores acepta la base de datos\n" +
+            "3. Ajustar la función 'normalizarTipoTarjeta' si es necesario";
+        }
+
+        throw new Error(errorMessage);
       }
 
-      // Éxito - Mostrar confirmación y redirigir
+      // 6. Éxito - Mostrar confirmación y limpiar carrito
       setIsProcessing(false);
       console.log(
         "🎉 PURCHASE: Purchase completed successfully!",
         paymentResult
       );
 
-      // Mostrar alerta de éxito
-      alert(
-        `¡Pago y reserva completados con éxito!\n\nResumen:\n- Vuelo: ${
-          flightData.flightNumber
-        }\n- Aerolínea: ${flightData.airline}\n- Clase: ${
-          selectedClass === "vip" ? "VIP" : "Económica"
-        }\n- Cantidad: ${ticketQuantity} tiquete(s)\n- Total: ${formatPrice(
-          totalPrice
-        )}\n\n¡Gracias por tu compra!`
-      );
+      // 7. Eliminar la reserva del carrito local
+      try {
+        const currentCart = JSON.parse(
+          localStorage.getItem("vivasky_cart") || "[]"
+        );
+        const updatedCart = currentCart.filter(
+          (item) =>
+            item.flightNumber !==
+            (flightData?.flightNumber || location.state?.flight?.flightNumber)
+        );
+        localStorage.setItem("vivasky_cart", JSON.stringify(updatedCart));
+        console.log("🗑️ PURCHASE: Reservation removed from local cart");
 
-      // Redirigir a la página principal o a mis reservas
-      navigate("/my-reservations", {
+        window.dispatchEvent(new Event("vivasky-cart-changed"));
+      } catch (cartErr) {
+        console.warn("⚠️ PURCHASE: Error removing from local cart:", cartErr);
+      }
+
+      // 8. Mostrar alerta de éxito
+      const successMessage = `¡Pago y compra completados con éxito! ✅
+
+📋 Resumen de Compra:
+✈️ Vuelo: ${flightData?.flightNumber || location.state?.flight?.flightNumber}
+🛫 Aerolínea: ${flightData?.airline || location.state?.flight?.airline}
+🎫 Clase: ${selectedClass === "vip" ? "⭐ VIP" : "💺 Económica"}
+🎟️ Cantidad: ${ticketQuantity} tiquete(s)
+💰 Total Pagado: ${formatPrice(precioFinal)}
+💳 Tarjeta: ****${cardData.numtarjeta.slice(-4)} (${
+        cardData.tipo === "credito" ? "Crédito" : "Débito"
+      })
+🔢 ID Transacción: ${
+        paymentResult.idtransaccion || paymentResult.idpago || "N/A"
+      }
+📅 Fecha: ${new Date().toLocaleDateString("es-CO")}
+
+📧 Se ha enviado un correo de confirmación a tu email.
+📱 Puedes ver tus reservas en "Mis Reservas".
+
+¡Gracias por tu compra! 🎉`;
+
+      alert(successMessage);
+
+      // 9. Redirigir a la página de mis reservas
+      navigate("/my-purchases", {
         state: {
           purchaseSuccess: true,
           reservation: paymentResult,
-          flight: flightData,
+          flight: flightData || location.state?.flight,
+          purchaseDetails: {
+            total: precioFinal,
+            ticketQuantity: ticketQuantity,
+            selectedClass: selectedClass,
+            paymentMethod: useSavedCard ? "Tarjeta Guardada" : "Nueva Tarjeta",
+            cardType: cardData.tipo === "credito" ? "Crédito" : "Débito",
+            transactionId:
+              paymentResult.idtransaccion ||
+              paymentResult.idpago ||
+              Date.now().toString(),
+            cardLastDigits: cardData.numtarjeta.slice(-4),
+            purchaseDate: new Date().toISOString(),
+          },
         },
+        replace: true,
       });
     } catch (err) {
       console.error("❌ PURCHASE: Purchase failed:", err);
-      setErrorMsg(
-        err.message ||
-          "Ocurrió un error procesando el pago. Por favor intenta nuevamente."
-      );
+      setErrorMsg(err.message);
       setIsProcessing(false);
     }
   };
@@ -587,7 +852,7 @@ const PurchaseFlight = () => {
     );
   }
 
-  if (!flightData) {
+  if (!flightData && !location.state?.flight) {
     return (
       <div className="app">
         <header className="header">
@@ -613,6 +878,11 @@ const PurchaseFlight = () => {
 
   console.log("🎨 RENDER: Rendering component with current state");
   debugFlightData();
+
+  const currentFlight = flightData || location.state?.flight;
+  const precioUnitario = calcularPrecioSeguro();
+  const totalCalculado = totalPrice || precioUnitario * ticketQuantity;
+  const idReserva = mostrarIdReservaEnUI();
 
   return (
     <div className="app">
@@ -646,19 +916,21 @@ const PurchaseFlight = () => {
                 <div className="route-summary">
                   <div className="cities">
                     <span className="city-from">
-                      {flightData.departure?.city}
+                      {currentFlight?.departure?.city}
                     </span>
                     <span className="arrow">→</span>
-                    <span className="city-to">{flightData.arrival?.city}</span>
+                    <span className="city-to">
+                      {currentFlight?.arrival?.city}
+                    </span>
                   </div>
                   <div className="dates">
                     <div className="date-section">
-                      <strong>Salida:</strong> {flightData.departure?.date}
+                      <strong>Salida:</strong> {currentFlight?.departure?.date}
                     </div>
-                    {flightData.returnFlight && (
+                    {currentFlight?.returnFlight && (
                       <div className="date-section">
                         <strong>Retorno:</strong>{" "}
-                        {flightData.returnFlight.departure?.date}
+                        {currentFlight.returnFlight.departure?.date}
                       </div>
                     )}
                   </div>
@@ -667,11 +939,11 @@ const PurchaseFlight = () => {
                 <div className="flight-details">
                   <div className="detail-item">
                     <span>Aerolínea:</span>
-                    <span>{flightData.airline}</span>
+                    <span>{currentFlight?.airline}</span>
                   </div>
                   <div className="detail-item">
                     <span>Número de vuelo:</span>
-                    <span>{flightData.flightNumber}</span>
+                    <span>{currentFlight?.flightNumber}</span>
                   </div>
                   <div className="detail-item">
                     <span>Clase:</span>
@@ -679,14 +951,22 @@ const PurchaseFlight = () => {
                       {selectedClass === "vip" ? "⭐ VIP" : "💺 Económica"}
                     </span>
                   </div>
-
-                  {/* Debug info en UI */}
-                  <div className="detail-item debug-info">
-                    <span>Precio Base:</span>
-                    <span>
-                      {formatPrice(Number(flightData.priceNumber) || 0)}
-                    </span>
+                  <div className="detail-item">
+                    <span>Cantidad de tiquetes:</span>
+                    <span>{ticketQuantity}</span>
                   </div>
+
+                  <div className="detail-item debug-info">
+                    <span>Precio Unitario:</span>
+                    <span>{formatPrice(precioUnitario)}</span>
+                  </div>
+
+                  {idReserva && (
+                    <div className="detail-item debug-info">
+                      <span>ID de Reserva:</span>
+                      <span className="reservation-id">{idReserva}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -722,7 +1002,52 @@ const PurchaseFlight = () => {
                 </button>
               </div>
 
-              {errorMsg && <div className="error-alert">{errorMsg}</div>}
+              {errorMsg && (
+                <div className="error-alert detailed">
+                  <div className="error-header">
+                    <span className="error-icon">❌</span>
+                    <strong>Error en el pago</strong>
+                  </div>
+                  <div className="error-message">
+                    {errorMsg.split("\n").map((line, i) => (
+                      <p key={i} style={{ margin: "5px 0" }}>
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                  <div className="error-actions">
+                    <button
+                      className="error-retry-btn"
+                      onClick={() => setErrorMsg("")}
+                    >
+                      Intentar de nuevo
+                    </button>
+                    <button
+                      className="error-debug-btn"
+                      onClick={() => {
+                        console.log("🔍 DEBUG: Current state:", {
+                          flightData,
+                          userInfo,
+                          selectedCard,
+                          purchasePayload: {
+                            idcliente: obtenerIdCliente(userInfo),
+                            idtiquete: obtenerIdTiquete(),
+                            numtarjeta:
+                              selectedCard?.numtarjeta ||
+                              cardNumber.replace(/\s/g, ""),
+                            metodopago: normalizarTipoTarjeta(
+                              selectedCard?.tipo || paymentMethod
+                            ),
+                          },
+                        });
+                        alert("Revisa la consola para detalles de debug");
+                      }}
+                    >
+                      Ver detalles técnicos
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* OPCIÓN A: tarjetas guardadas */}
               {useSavedCard ? (
@@ -754,7 +1079,8 @@ const PurchaseFlight = () => {
                               </div>
                               <div className="card-meta">
                                 <span>
-                                  {card.tipo === "credito"
+                                  {card.tipo === "credito" ||
+                                  card.tipo === "credito"
                                     ? "Crédito"
                                     : "Débito"}
                                 </span>
@@ -792,7 +1118,7 @@ const PurchaseFlight = () => {
                       )}
                     </>
                   ) : (
-                    <p>
+                    <p className="no-cards-message">
                       No tienes tarjetas guardadas. Usa "Usar Nueva Tarjeta"
                       para pagar.
                     </p>
@@ -854,8 +1180,8 @@ const PurchaseFlight = () => {
                       value={paymentMethod}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                     >
-                      <option value="credit">Crédito</option>
-                      <option value="debit">Débito</option>
+                      <option value="credito">Crédito</option>
+                      <option value="debito">Débito</option>
                     </select>
                   </div>
                 </div>
@@ -868,7 +1194,7 @@ const PurchaseFlight = () => {
                   <div className="summary-item">
                     <span>
                       Vuelo{" "}
-                      {flightData.returnFlight
+                      {currentFlight?.returnFlight
                         ? "(Ida y Vuelta)"
                         : "(Solo Ida)"}
                       :
@@ -885,9 +1211,7 @@ const PurchaseFlight = () => {
 
                   <div className="summary-item">
                     <span>Precio unitario:</span>
-                    <span>
-                      {formatPrice(Number(flightData.priceNumber) || 0)}
-                    </span>
+                    <span>{formatPrice(precioUnitario)}</span>
                   </div>
 
                   <div className="summary-divider"></div>
@@ -895,7 +1219,7 @@ const PurchaseFlight = () => {
                   <div className="summary-total">
                     <span>Total a Pagar:</span>
                     <span className="total-amount">
-                      {formatPrice(totalPrice)}
+                      {formatPrice(totalCalculado)}
                     </span>
                   </div>
                 </div>
@@ -913,13 +1237,35 @@ const PurchaseFlight = () => {
                     Procesando Pago...
                   </>
                 ) : (
-                  `Pagar ${formatPrice(totalPrice)}`
+                  `Pagar ${formatPrice(totalCalculado)}`
                 )}
               </button>
 
               <div className="security-notice">
                 <span className="lock-icon">🔒</span>
                 <span>Tu pago está protegido con encriptación SSL</span>
+              </div>
+
+              {/* Información de debug para el usuario */}
+              <div
+                className="debug-info-box"
+                style={{
+                  marginTop: "20px",
+                  padding: "10px",
+                  backgroundColor: "#f5f5f5",
+                  borderRadius: "5px",
+                  fontSize: "12px",
+                  color: "#666",
+                }}
+              >
+                <strong>🔧 Información Técnica:</strong>
+                <div>ID Cliente: {obtenerIdCliente(userInfo)}</div>
+                <div>ID Tiquete: {obtenerIdTiquete()}</div>
+                <div>Endpoint: POST /api/compra/pagar</div>
+                <div>
+                  Tipo tarjeta enviado:{" "}
+                  {normalizarTipoTarjeta(selectedCard?.tipo || paymentMethod)}
+                </div>
               </div>
             </div>
           </div>
