@@ -269,9 +269,6 @@ const HomePage = () => {
             <a href="#" onClick={handleComingSoon}>
               Noticias
             </a>
-            <a href="#" onClick={handleComingSoon}>
-              Destinos
-            </a>
           </nav>
         )}
 
