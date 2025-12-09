@@ -27,84 +27,71 @@ const UserMenu = ({ userInfo, onLogout }) => {
   const handleMenuItemClick = (action) => {
     setIsOpen(false);
 
-    //Acciones para cada item del menú
-    //Acciones para cada item del menú
+    // Acciones para cada item del menú - ACTUALIZADO
     const actions = {
       // Root
       "create-admin": () => navigate("/create-admin"),
-      "create-admin": () => navigate("/create-admin"),
 
-      // Administrador y Usuario
       // Administrador y Usuario
       "edit-info": () => navigate("/edit-profile"),
+      "change-password": () => navigate("/forgot-password"),
+      news: () => navigate("/news"),
 
       // Administrador
-      "manage-flights": () => alert("Funcionalidad: Gestionar Vuelos, ¡Proximamente Disponible!"),
-      "cancel-tickets": () => alert("Funcionalidad: Cancelar Tiquetes, ¡Proximamente Disponible!"),
-      "manage-news": () => alert("Funcionalidad: Gestionar Noticias, ¡Proximamente Disponible!"),
-      messaging: () => alert("Funcionalidad: Mensajería, ¡Proximamente Disponible!"),
-      history: () => alert("Funcionalidad: Historial, ¡Proximamente Disponible!"),
+      "manage-flights": () => navigate("/manage-flights"),
+      "cancel-flights": () => navigate("/cancel-flights"),
+      "manage-news": () => navigate("/manage-news"),
+      messaging: () => navigate("/messaging"),
+      history: () => navigate("/my-purchases"),
 
       // Usuario
-      "check-in": () => alert("Funcionalidad: Check-in, ¡Proximamente Disponible!"),
-      "balance-payments": () => alert("Funcionalidad: Saldo y Pagos, ¡Proximamente Disponible!"),
+      "balance-payments": () => navigate("balance-payments"),
+      cart: () => navigate("/cart"), // NUEVA OPCIÓN
     };
 
     if (actions[action]) {
       actions[action]();
     }
   };
-
-  // Definir items del menú según el rol - CORREGIDO
+  // Definir items del menú según el rol - ACTUALIZADO para incluir todas las opciones del admin
   const getMenuItems = () => {
-    const commonItems = [
-      { id: "messaging", label: "Mensajería", icon: "💬" },
-      { id: "history", label: "Historial", icon: "📊" },
-    ];
+    const commonItems = [{ id: "messaging", label: " ", icon: " " }];
 
     const roleSpecificItems = {
       root: [{ id: "create-admin", label: "Crear Administrador", icon: "👨‍💼" }],
       administrador: [
-        { id: "edit-info", label: "Editar Información", icon: "✏️" },
+        { id: "edit-info", label: "Editar Perfil", icon: "✏️" },
+        { id: "change-password", label: "Cambiar Contraseña", icon: "🔒" },
         { id: "manage-flights", label: "Gestionar Vuelos", icon: "✈️" },
-        { id: "cancel-tickets", label: "Cancelar Tiquetes", icon: "🎫" },
-        { id: "manage-news", label: "Gestionar Noticias", icon: "📰" },
+        { id: "cancel-flights", label: "Cancelar Vuelos", icon: "❌" },
+        { id: "news", label: " Gestionar Noticias", icon: "📰" },
       ],
       cliente: [
         { id: "edit-info", label: "Editar Información", icon: "✏️" },
-        { id: "cancel-tickets", label: "Cancelar Tiquete", icon: "🎫" },
-        { id: "check-in", label: "Check-in", icon: "✅" },
+        { id: "change-password", label: "Cambiar Contraseña", icon: "🔒" },
+        { id: "cart", label: "Carrito de Compras", icon: "🛒" },
         { id: "balance-payments", label: "Saldo y Pagos", icon: "💰" },
+        { id: "news", label: "Noticias", icon: "📰" },
+        { id: "history", label: "Historial Compras", icon: "📊" },
       ],
     };
 
     const specificItems = roleSpecificItems[userInfo.role] || [];
 
-
     // Solo agregar divider si hay items específicos Y comunes
     if (specificItems.length > 0 && commonItems.length > 0) {
-      return [
-        ...specificItems,
-        { type: "divider" },
-        ...commonItems,
-        { type: "divider" },
-      ];
+      return [...specificItems, { type: "divider" }];
     }
-
 
     // Si solo hay items específicos
     if (specificItems.length > 0) {
       return [...specificItems, { type: "divider" }];
-      return [...specificItems, { type: "divider" }];
     }
-
 
     // Si solo hay items comunes
     if (commonItems.length > 0) {
       return [...commonItems, { type: "divider" }];
-      return [...commonItems, { type: "divider" }];
     }
-
 
     return [];
   };
@@ -114,7 +101,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
   return (
     <div className="user-menu-container" ref={menuRef}>
       <button className="user-menu-trigger" onClick={toggleMenu}>
-        <span className="user-welcome">Bienvenido, {userInfo.nombre}</span>
+        <span className="user-welcome">Hola, {userInfo.nombre}</span>
         <span className="user-role">({userInfo.role})</span>
         <span style={{ fontSize: "12px" }}>▼</span>
       </button>
@@ -132,9 +119,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
           </div>
 
           <div className="user-menu-items">
-            <div className="menu-section-title">
-              Funciones de {userInfo.role}
-            </div>
+            <div className="menu-section-title">MI CUENTA</div>
 
             {menuItems.map((item, index) => {
               if (item.type === "divider") {
