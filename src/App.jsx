@@ -612,9 +612,6 @@ const HomePage = () => {
             <a href="#" onClick={() => navigate("/news")}>
               Noticias
             </a>
-            <a href="#" onClick={handleComingSoon}>
-              Destinos
-            </a>
           </nav>
         )}
 
