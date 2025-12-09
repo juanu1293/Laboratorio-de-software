@@ -45,7 +45,6 @@ const UserMenu = ({ userInfo, onLogout }) => {
       history: () => navigate("/my-purchases"),
 
       // Usuario
-      "check-in": () => navigate("/check-in"),
       "balance-payments": () => navigate("balance-payments"),
       cart: () => navigate("/cart"), // NUEVA OPCIÓN
     };
@@ -56,7 +55,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
   };
   // Definir items del menú según el rol - ACTUALIZADO para incluir todas las opciones del admin
   const getMenuItems = () => {
-    const commonItems = [{ id: "messaging", label: "Mensajería", icon: "💬" }];
+    const commonItems = [{ id: "messaging", label: " ", icon: " " }];
 
     const roleSpecificItems = {
       root: [{ id: "create-admin", label: "Crear Administrador", icon: "👨‍💼" }],
@@ -71,7 +70,6 @@ const UserMenu = ({ userInfo, onLogout }) => {
         { id: "edit-info", label: "Editar Información", icon: "✏️" },
         { id: "change-password", label: "Cambiar Contraseña", icon: "🔒" },
         { id: "cart", label: "Carrito de Compras", icon: "🛒" },
-        { id: "check-in", label: "Check-in", icon: "✅" },
         { id: "balance-payments", label: "Saldo y Pagos", icon: "💰" },
         { id: "news", label: "Noticias", icon: "📰" },
         { id: "history", label: "Historial Compras", icon: "📊" },
@@ -82,12 +80,7 @@ const UserMenu = ({ userInfo, onLogout }) => {
 
     // Solo agregar divider si hay items específicos Y comunes
     if (specificItems.length > 0 && commonItems.length > 0) {
-      return [
-        ...specificItems,
-        { type: "divider" },
-        ...commonItems,
-        { type: "divider" },
-      ];
+      return [...specificItems, { type: "divider" }];
     }
 
     // Si solo hay items específicos
