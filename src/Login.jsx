@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./App.css";
+import apiService from "./apiService";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -49,27 +50,20 @@ const Login = () => {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ correo: email, contrasena: password }),
-      });
+      // Usar apiService para respetar VITE_API_URL / runtime override
+      const data = await apiService.post("/auth/login", { correo: email, contrasena: password });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        const storeData = () => {
-          if (rememberMe) {
-            localStorage.setItem("authToken", data.token);
-            localStorage.setItem("userData", JSON.stringify(data.usuario));
-            localStorage.setItem("userEmail", data.usuario.correo);
-          } else {
-            sessionStorage.setItem("authToken", data.token);
-            sessionStorage.setItem("userData", JSON.stringify(data.usuario));
-          }
-        };
-
-        storeData();
+      const storeData = () => {
+        if (rememberMe) {
+          localStorage.setItem("authToken", data.token);
+          localStorage.setItem("userData", JSON.stringify(data.usuario));
+          localStorage.setItem("userEmail", data.usuario.correo);
+        } else {
+          sessionStorage.setItem("authToken", data.token);
+          sessionStorage.setItem("userData", JSON.stringify(data.usuario));
+        }
+      };
+      storeData();
 
         if (
           data.usuario.tipo_usuario === "administrador" &&
@@ -91,20 +85,18 @@ const Login = () => {
             },
           });
         }
-      } else {
-        if (response.status === 401) {
-          setError("Credenciales incorrectas. Verifica tu email y contraseña.");
-        } else if (response.status === 403) {
-          setError("Tu cuenta está desactivada. Contacta al soporte.");
-        } else if (response.status === 404) {
-          setError("No existe una cuenta con este email.");
-        } else {
-          setError(data.message || "Error al iniciar sesión. Intenta nuevamente.");
-        }
-      }
     } catch (err) {
-      setError("Error de conexión con el servidor. Verifica tu conexión e intenta nuevamente.");
-    } finally {
+      // apiService lanza errores con .status cuando la respuesta no es ok
+      if (err && err.status === 401) {
+        setError("Credenciales incorrectas. Verifica tu email y contraseña.");
+      } else if (err && err.status === 403) {
+        setError("Tu cuenta está desactivada. Contacta al soporte.");
+      } else if (err && err.status === 404) {
+        setError("No existe una cuenta con este email.");
+      } else {
+        setError(err.message || "Error de conexión con el servidor. Verifica tu conexión e intenta nuevamente.");
+      }
+     } finally {
       setIsLoading(false);
     }
   };
