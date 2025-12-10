@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./App.css";
+import apiService from "./apiService";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -65,9 +66,8 @@ const Register = () => {
   useEffect(() => {
     const fetchCountries = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/location/paises");
-        const data = await res.json();
-        setCountries(data); // [{id:1, nombre:"Colombia"}, ...]
+        const data = await apiService.get("/location/paises");
+        setCountries(data); // [{id:1, name:"Colombia"}, ...]
       } catch (err) {
         console.error("Error al cargar países:", err);
       }
@@ -86,11 +86,8 @@ const Register = () => {
 
     if (value) {
       try {
-        const res = await fetch(
-          `http://localhost:5000/api/location/departamentos/${value}`
-        );
-        const data = await res.json();
-        setAvailableDepartments(data); // [{id:10, nombre:"Antioquia"}, ...]
+        const data = await apiService.get(`/location/departamentos/${value}`);
+        setAvailableDepartments(data); // [{id:10, name:"Antioquia"}, ...]
         setAvailableCities([]);
       } catch (err) {
         console.error("Error al cargar departamentos:", err);
@@ -109,11 +106,8 @@ const Register = () => {
 
     if (value) {
       try {
-        const res = await fetch(
-          `http://localhost:5000/api/location/ciudades/${value}`
-        );
-        const data = await res.json();
-        setAvailableCities(data); // [{id:100, nombre:"Medellín"}, ...]
+        const data = await apiService.get(`/location/ciudades/${value}`);
+        setAvailableCities(data); // [{id:100, name:"Medellín"}, ...]
       } catch (err) {
         console.error("Error al cargar ciudades:", err);
       }
@@ -256,19 +250,7 @@ const Register = () => {
         foto: profilePhoto || null, // 👈 foto en base64 (igual que EditProfile)
       };
 
-      const response = await fetch("http://localhost:5000/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Error en el registro");
-      }
+      const data = await apiService.post("/auth/register", userData);
 
       localStorage.setItem("userEmail", formData.email);
 
