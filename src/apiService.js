@@ -1,6 +1,6 @@
 // src/apiService.js
 
-// Normaliza la URL base del API desde la variable de entorno Vite o usa localhost en desarrollo
+//Normaliza la URL base del API desde la variable de entorno Vite o usa localhost en desarrollo
 const envBase = import.meta.env.VITE_API_URL || "http://localhost:5000";
 const API_BASE_URL = envBase.replace(/\/$/, "") + "/api";
 
@@ -72,3 +72,4 @@ const apiService = {
 };
 
 export default apiService;
+
