@@ -1,9 +1,10 @@
 // src/apiService.js
 
-//Normaliza la URL base del API desde la variable de entorno Vite o usa localhost en desarrollo
+// Normaliza la URL base del API desde la variable de entorno Vite o usa localhost en desarrollo
 const envBase = import.meta.env.VITE_API_URL || "http://localhost:5000";
 const API_BASE_URL = envBase.replace(/\/$/, "") + "/api";
 
+console.info("📡 API_BASE_URL:", API_BASE_URL); // <-- añade esto para confirmar en runtime
 // Función para obtener el token (de localStorage o sessionStorage)
 const getToken = () => {
   return localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
@@ -72,4 +73,5 @@ const apiService = {
 };
 
 export default apiService;
+
 
