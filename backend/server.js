@@ -11,9 +11,10 @@ const app = express();
 
 // Configuración de CORS para múltiples orígenes
 const allowedOrigins = [
-  "http://localhost:5173", // Desarrollo local
-  "http://localhost:3000", // Alternativo desarrollo
-].concat(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []);
+  "http://localhost:5173",      // Desarrollo local
+  "http://localhost:3000",      // Alternativo desarrollo
+  process.env.FRONTEND_URL,     // URL del frontend en Render
+];
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -65,24 +66,6 @@ app.use("/api/carrito", carritoRoutes);
 
 const compraRoutes = require("./routes/compraRoutes");
 app.use("/api/compra", compraRoutes);
-
-const compraRoutes = require("./routes/compraRoutes");
-app.use("/api/compra", compraRoutes);
-
-// Inserta las rutas de healthcheck / redirect aquí (inmediatamente después de .use(...) y antes de app.listen)
-app.get("/", (req, res) => {
-  const frontend = process.env.FRONTEND_URL || "https://laboratorio-de-software.vercel.app";
-  return res.json({
-    status: "ok",
-    message: "Backend API running",
-    frontend,
-  });
-});
-
-app.get("/go-to-frontend", (req, res) => {
-  const frontend = process.env.FRONTEND_URL || "https://laboratorio-de-software.vercel.app";
-  return res.redirect(frontend);
-});
 
 // Puerto
 const PORT = process.env.PORT || 5000;
