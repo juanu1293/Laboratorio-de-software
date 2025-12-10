@@ -11,10 +11,9 @@ const app = express();
 
 // Configuración de CORS para múltiples orígenes
 const allowedOrigins = [
-  "http://localhost:5173",      // Desarrollo local
-  "http://localhost:3000",      // Alternativo desarrollo
-  process.env.FRONTEND_URL,     // URL del frontend en Render
-];
+  "http://localhost:5173", // Desarrollo local
+  "http://localhost:3000", // Alternativo desarrollo
+].concat(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []);
 
 const corsOptions = {
   origin: (origin, callback) => {
