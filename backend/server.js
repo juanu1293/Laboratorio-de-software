@@ -9,12 +9,30 @@ dotenv.config();
 
 const app = express();
 
+// Configuración de CORS para múltiples orígenes
+const allowedOrigins = [
+  "http://localhost:5173",      // Desarrollo local
+  "http://localhost:3000",      // Alternativo desarrollo
+  process.env.FRONTEND_URL,     // URL del frontend en Render
+];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
 // Middlewares
-app.use(cors({
-  origin: "http://localhost:5173", // puerto de tu frontend
-  credentials: true
-}));
+app.use(cors(corsOptions));
 app.use(express.json()); // Para recibir JSON en requests
+app.use(express.urlencoded({ extended: true })); // Para datos urlencoded
 
 // Rutas
 const authRoutes = require("./routes/auth");
